@@ -1,0 +1,115 @@
+{
+    "player": {
+        "name": "fgfgf",
+        "gender": "Male",
+        "age": 20,
+        "occupation": "Noble",
+        "health": 100,
+        "wealth": 1082,
+        "skills": {
+            "combat": 5,
+            "diplomacy": 9,
+            "stewardship": 7,
+            "farming": 5,
+            "crafting": 10,
+            "medicine": 8,
+            "trading": 2
+        },
+        "traits": [
+            "cruel",
+            "honest",
+            "cynical",
+            "kind"
+        ],
+        "reputation": 50,
+        "relations": {},
+        "spouse": "Princess Isabella",
+        "children": [],
+        "parents": [],
+        "events": [
+            {
+                "text": "Congratulations! You are now married to Princess Isabella.",
+                "timestamp": "Spring, Year 1200"
+            },
+            {
+                "text": "You received a dowry of 379 gold.",
+                "timestamp": "Spring, Year 1200"
+            },
+            {
+                "text": "You decided to manage estate.",
+                "timestamp": "Spring, Year 1200"
+            },
+            {
+                "text": "You spend the day manage estateing.",
+                "timestamp": "Spring, Year 1200"
+            },
+            {
+                "text": "You decided to host event.",
+                "timestamp": "Spring, Year 1200"
+            },
+            {
+                "text": "You spend the day host eventing.",
+                "timestamp": "Spring, Year 1200"
+            },
+            {
+                "text": "You decided to host event.",
+                "timestamp": "Spring, Year 1200"
+            },
+            {
+                "text": "You spend the day host eventing.",
+                "timestamp": "Spring, Year 1200"
+            },
+            {
+                "text": "You decided to collect taxes.",
+                "timestamp": "Spring, Year 1200"
+            },
+            {
+                "text": "You collected 56 gold in taxes.",
+                "timestamp": "Spring, Year 1200"
+            }
+        ]
+    },
+    "world": {
+        "year": 1200,
+        "season": "Spring",
+        "kingdoms": {
+            "Westoria": {
+                "ruler": "King Edmund",
+                "capital": "Crownhaven",
+                "cities": [
+                    "Crownhaven",
+                    "Eastport",
+                    "Northkeep"
+                ],
+                "villages": [
+                    "Millvale",
+                    "Riverside",
+                    "Oakhill",
+                    "Pinedale"
+                ],
+                "prosperity": 70,
+                "stability": 65
+            },
+            "Eastmark": {
+                "ruler": "Queen Elara",
+                "capital": "Easthold",
+                "cities": [
+                    "Easthold",
+                    "Southbay"
+                ],
+                "villages": [
+                    "Greenmeadow",
+                    "Stonecrest"
+                ],
+                "prosperity": 60,
+                "stability": 80
+            }
+        },
+        "events": []
+    },
+    "current_year": 1200,
+    "current_season": "Spring",
+    "season_index": 0,
+    "current_location": "Crownhaven",
+    "turn": 1
+}
