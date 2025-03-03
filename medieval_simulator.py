@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, font
+from tkinter import ttk, messagebox, font, simpledialog
 from PIL import Image, ImageTk
 import json
 import os
@@ -20,6 +20,11 @@ class MedievalSimulator:
         self.text_font = font.Font(family="Times New Roman", size=12)
         self.small_font = font.Font(family="Times New Roman", size=10)
         
+        # UI colors
+        self.bg_color = "#f0e6d2"  # Original light beige background
+        self.text_color = "#5c4425"  # Original brown text
+        self.root.configure(bg=self.bg_color)
+        
         # Game data
         self.player = None
         self.world = None
@@ -28,10 +33,11 @@ class MedievalSimulator:
         self.current_season = "Spring"
         self.seasons = ["Spring", "Summer", "Autumn", "Winter"]
         self.season_index = 0
-        self.turn = 1
+        self.current_day = 1
+        self.event_log = []
         
-        # Configure main container
-        self.main_container = tk.Frame(self.root, bg="#f0e6d2")
+        # Create a main container for all screens
+        self.main_container = tk.Frame(self.root, bg=self.bg_color)
         self.main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         # Start with the main menu
@@ -101,6 +107,11 @@ class MedievalSimulator:
             self.update_event_log()
     
     def update_event_log(self):
+        """Update the event log display with all events"""
+        # Check if event_log widget exists
+        if not hasattr(self, 'event_log'):
+            return
+            
         # Clear existing event log
         self.event_log.delete(1.0, tk.END)
         
@@ -167,57 +178,60 @@ class MedievalSimulator:
         messagebox.showinfo("Options", "Options menu will be implemented in a future update.")
     
     def get_occupation_description(self, occupation):
-        """Return a description of the selected occupation"""
+        """Return a description for the selected occupation"""
         descriptions = {
-            "King": "As a king, you rule over your kingdom with absolute authority. Your decisions shape the lives of thousands of subjects. You have great wealth and power, but also great responsibilities and many who might plot against you.",
+            "King": "As King, you rule over your own kingdom with absolute authority. Your wealth is unmatched, but the responsibilities are heavy. You must manage relations with nobles, defend against rival kingdoms, and ensure your subjects remain loyal. Your decisions will shape the fate of thousands.\n\nStarting wealth: Very High\nKey skills: Leadership, Politics, Warfare",
             
-            "Noble": "As a noble, you are a member of the aristocracy with lands, wealth, and influence. You have responsibilities to both the crown above you and the peasants who work your lands. Your life is one of privilege, but also political intrigue.",
+            "Noble": "Born into privilege as a Noble, you own vast lands and command respect wherever you go. You have significant influence in court politics and can leverage your family connections. However, you must maintain your status through strategic marriages and alliances.\n\nStarting wealth: High\nKey skills: Etiquette, Politics, Management",
             
-            "Knight": "As a knight, you are a warrior sworn to serve your lord and uphold the code of chivalry. You are skilled in combat and may own a small estate. You are expected to fight in wars and tournaments, and to protect the weak.",
+            "Knight": "As a Knight, you've sworn oaths of loyalty and chivalry. You're skilled in combat and respected for your honor. You may serve a lord directly or be a wandering knight seeking glory in tournaments and battle. Your martial prowess is your greatest asset.\n\nStarting wealth: Medium\nKey skills: Combat, Riding, Leadership",
             
-            "Merchant": "As a merchant, you make your living through trade and commerce. You travel between towns and cities, buying and selling goods for profit. You have freedom and opportunity for wealth, but face risks from bandits and market fluctuations.",
+            "Merchant": "The life of a Merchant is one of opportunity and risk. You travel between towns and cities, buying low and selling high. With shrewd deals and careful investment, you could amass a fortune to rival the nobility. Your network of contacts is as valuable as your coin.\n\nStarting wealth: Medium-High\nKey skills: Bargaining, Mathematics, Persuasion",
             
-            "Tavern Owner": "As a tavern owner, you run an establishment that serves as the social center of the community. You hear all the local gossip and meet travelers from far and wide. Your business provides a steady income and many connections.",
+            "Tavern Owner": "As a Tavern Owner, you're at the heart of the community. Your establishment is where people gather to drink, gossip, and find respite from their daily toils. You hear all the local news and rumors, making you surprisingly well-informed about the goings-on in your area.\n\nStarting wealth: Medium\nKey skills: Brewing, Cooking, Socializing",
             
-            "Farmer": "As a farmer, you work the land to grow crops and raise livestock. Your life follows the rhythm of the seasons, with hard work during planting and harvest. You are the backbone of medieval society, providing food for all.",
+            "Farmer": "The honest life of a Farmer is one of hard work and connection to the land. You grow crops and raise animals to feed yourself and sell at market. While not wealthy, you have independence and the satisfaction of living by the fruits of your labor. Your fortunes rise and fall with the seasons.\n\nStarting wealth: Low-Medium\nKey skills: Agriculture, Animal Husbandry, Crafting",
             
-            "Peasant": "As a peasant, you live a humble life working the land owned by nobles. Your days are filled with hard labor, but you find joy in simple pleasures and community celebrations. Though your means are limited, you have opportunities to improve your station through hard work and clever dealings."
+            "Peasant": "As a humble Peasant, you begin with little but your determination. You work the land owned by others and struggle to make ends meet. However, your simple origins mean you're resourceful and hardy. With cunning and perseverance, you might rise above your station.\n\nStarting wealth: Low\nKey skills: Survival, Labor, Foraging"
         }
         
-        return descriptions.get(occupation, "No description available for this occupation.")
+        return descriptions.get(occupation, "Select an occupation to see its description.")
     
     def create_character(self):
         """Create a new character based on form inputs"""
-        # Validate inputs
+        # Get form values
         name = self.name_var.get().strip()
+        gender = self.gender_var.get()
+        occupation = self.occupation_var.get()
+        
+        # Validate inputs
         if not name:
-            messagebox.showerror("Error", "Please enter a name.")
+            messagebox.showerror("Error", "Please enter a name for your character.")
+            return
+            
+        if not gender:
+            messagebox.showerror("Error", "Please select a gender for your character.")
+            return
+            
+        if not occupation:
+            messagebox.showerror("Error", "Please select an occupation for your character.")
             return
         
-        gender = self.gender_var.get()
-        if not gender:
-            messagebox.showerror("Error", "Please select a gender.")
-            return
-            
-        occupation = self.occupation_var.get()
-        if not occupation:
-            messagebox.showerror("Error", "Please select an occupation.")
-            return
-            
         # Create player data
         self.player = {
             "name": name,
-            "gender": gender.lower(),  # Store gender in lowercase for consistency
-            "age": random.randint(18, 30),
+            "gender": gender.lower(),
             "occupation": occupation,
+            "age": random.randint(18, 30),
             "health": 100,
             "wealth": self.get_starting_wealth(occupation),
             "skills": self.generate_skills(occupation),
             "traits": self.generate_traits(),
+            "inventory": [],
+            "equipment": {},
             "spouse": None,
             "children": [],
-            "inventory": [],
-            "events": []
+            "events": []  # Initialize events list
         }
         
         # Generate world data
@@ -235,9 +249,10 @@ class MedievalSimulator:
         self.current_day = 1
         
         # Add initial event
-        self.add_event(f"You begin your life as a {occupation.lower()} in {self.current_location}.")
+        initial_message = f"You begin your life as a {occupation} in {self.current_location}."
+        self.add_event(initial_message)
         
-        # Show the main game interface
+        # Show game interface
         self.show_game_interface()
     
     def get_starting_wealth(self, occupation):
@@ -372,24 +387,20 @@ class MedievalSimulator:
         left_panel.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
         left_panel.pack_propagate(False)
         
+        # Location info
         location_label = tk.Label(left_panel, text="Location", font=self.header_font, bg="#e6d8bf", fg="#5c4425")
         location_label.pack(pady=(10, 5))
         
-        self.location_info = tk.Label(left_panel, text=self.current_location, font=self.text_font, bg="#e6d8bf", fg="#5c4425")
-        self.location_info.pack(pady=5)
-        
-        # Location type (city, village, etc.)
         location_type = self.get_location_type(self.current_location)
-        location_type_label = tk.Label(left_panel, text=f"Type: {location_type}", font=self.small_font, bg="#e6d8bf", fg="#5c4425")
-        location_type_label.pack(pady=2)
-        
-        # Kingdom info
         kingdom = self.get_kingdom_for_location(self.current_location)
-        kingdom_label = tk.Label(left_panel, text=f"Kingdom: {kingdom}", font=self.small_font, bg="#e6d8bf", fg="#5c4425")
-        kingdom_label.pack(pady=2)
+        
+        location_info = tk.Label(left_panel, text=f"{self.current_location}\n{location_type} in {kingdom}", 
+                               font=self.small_font, bg="#e6d8bf", fg="#5c4425", justify=tk.LEFT)
+        location_info.pack(pady=(0, 10))
         
         # Separator
         ttk.Separator(left_panel, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10, padx=10)
+        
         # Quick stats
         stats_label = tk.Label(left_panel, text="Skills", font=self.header_font, bg="#e6d8bf", fg="#5c4425")
         stats_label.pack(pady=(10, 5))
@@ -397,17 +408,27 @@ class MedievalSimulator:
         # Show main skills based on occupation
         self.display_key_skills(left_panel)
         
+        # Action buttons
+        actions_label = tk.Label(left_panel, text="Actions", font=self.header_font, bg="#e6d8bf", fg="#5c4425")
+        actions_label.pack(pady=(20, 5))
+        
         # Travel button
         travel_btn = tk.Button(left_panel, text="Travel", 
                              **self.get_button_style("medium"),
                              command=self.show_travel_options)
-        travel_btn.pack(pady=10)
+        travel_btn.pack(pady=5)
+        
+        # Market button
+        market_btn = tk.Button(left_panel, text="Visit Market", 
+                             **self.get_button_style("medium"),
+                             command=self.show_market)
+        market_btn.pack(pady=5)
         
         # End Season button
         end_season_btn = tk.Button(left_panel, text="End Season", 
                                  **self.get_button_style("medium"),
                                  command=self.advance_season)
-        end_season_btn.pack(pady=10)
+        end_season_btn.pack(pady=5)
         
         # Center panel - main game area
         center_panel = tk.Frame(main_area, bg="#f0e6d2", bd=2, relief=tk.RIDGE)
@@ -420,19 +441,19 @@ class MedievalSimulator:
         desc_title = tk.Label(desc_frame, text=f"{self.current_location}", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
         desc_title.pack(anchor=tk.W)
         
-        desc_text = tk.Label(desc_frame, text=self.get_location_description(), 
-                           font=self.text_font, bg="#f0e6d2", fg="#5c4425", 
-                           wraplength=400, justify=tk.LEFT)
-        desc_text.pack(anchor=tk.W, pady=10)
+        location_desc = self.get_location_description()
+        desc_text = tk.Label(desc_frame, text=location_desc, font=self.text_font, bg="#f0e6d2", fg="#5c4425", 
+                           justify=tk.LEFT, wraplength=500)
+        desc_text.pack(fill=tk.X, pady=(10, 0))
         
         # Action buttons
         action_frame = tk.Frame(center_panel, bg="#f0e6d2", padx=15, pady=15)
         action_frame.pack(fill=tk.X)
         
-        action_title = tk.Label(action_frame, text="Actions", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
+        action_title = tk.Label(action_frame, text="Available Actions", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
         action_title.pack(anchor=tk.W, pady=(0, 10))
         
-        # Create action buttons based on occupation
+        # Create action buttons based on location and occupation
         self.create_action_buttons(action_frame)
         
         # Event log
@@ -468,29 +489,6 @@ class MedievalSimulator:
                              **self.get_button_style("medium"),
                              command=self.show_family_screen)
         family_btn.pack(pady=5)
-        
-        # Spouse button (if married)
-        if self.player.get("spouse"):
-            # Check if spouse is a string (old format) or a dictionary (new format)
-            if isinstance(self.player["spouse"], str):
-                # Convert to new format
-                self.player["spouse"] = {
-                    "name": self.player["spouse"],
-                    "age": random.randint(16, 40),
-                    "traits": self.generate_traits(),
-                    "relationship": 75
-                }
-                
-            spouse_btn = tk.Button(right_panel, text="Interact with Spouse", 
-                                 **self.get_button_style("medium"),
-                                 command=self.interact_with_spouse)
-            spouse_btn.pack(pady=5)
-        
-        # Market button
-        market_btn = tk.Button(right_panel, text="Market", 
-                             **self.get_button_style("medium"),
-                             command=self.show_market)
-        market_btn.pack(pady=5)
         
         # Inventory button
         inventory_btn = tk.Button(right_panel, text="Inventory", 
@@ -586,88 +584,236 @@ class MedievalSimulator:
             skill_text.pack(side=tk.LEFT)
     
     def create_action_buttons(self, parent_frame):
-        """Create occupation-specific action buttons"""
+        """Create action buttons based on location and occupation"""
+        # Common actions for all occupations
+        common_actions = ["Rest", "Explore"]
+        
+        # Occupation-specific actions
+        occupation_actions = {
+            "King": ["Hold Court", "Collect Taxes", "Make Decree"],
+            "Noble": ["Collect Rent", "Host Feast", "Attend Court"],
+            "Knight": ["Train", "Patrol", "Enter Tournament"],
+            "Merchant": ["Trade", "Negotiate", "Invest"],
+            "Tavern Owner": ["Serve Drinks", "Hire Bard", "Listen to Gossip"],
+            "Farmer": ["Tend Crops", "Harvest", "Sell Produce"],
+            "Peasant": ["Work", "Forage", "Beg"]
+        }
+        
+        # Get actions for current occupation
         occupation = self.player["occupation"]
+        actions = common_actions + occupation_actions.get(occupation, [])
         
-        if occupation == "King":
-            actions = ["Hold Court", "Collect Taxes", "Make Laws", "Diplomacy"]
-        elif occupation == "Noble":
-            actions = ["Manage Estate", "Host Event", "Collect Taxes", "Patronage"]
-        elif occupation == "Knight":
-            actions = ["Train", "Quest", "Tournament", "Patrol"]
-        elif occupation == "Merchant":
-            actions = ["Trade", "Invest", "Negotiate", "Travel"]
-        elif occupation == "Farmer":
-            actions = ["Plant Crops", "Harvest", "Tend Animals", "Improve Farm"]
-        elif occupation == "Craftsman":
-            actions = ["Create Goods", "Sell Wares", "Improve Skills", "Take Orders"]
-        elif occupation == "Tavern Owner":
-            actions = ["Serve Guests", "Hire Staff", "Special Event", "Renovate"]
-        elif occupation == "Beggar":
-            actions = ["Beg", "Scavenge", "Perform", "Listen for Rumors"]
-        else:
-            actions = ["Work", "Rest", "Socialize", "Learn"]
+        # Create a frame for the buttons
+        buttons_frame = tk.Frame(parent_frame, bg="#f0e6d2")
+        buttons_frame.pack(fill=tk.X)
         
-        # Create buttons for each action
+        # Create buttons in a grid layout
+        row, col = 0, 0
         for action in actions:
-            action_btn = tk.Button(parent_frame, text=action, 
-                                 command=lambda a=action: self.perform_action(a),
-                                 **self.get_button_style("action"))
-            action_btn.pack(side=tk.LEFT, padx=5)
+            btn = tk.Button(buttons_frame, text=action, 
+                          **self.get_button_style("small"),
+                          command=lambda a=action: self.perform_action(a))
+            btn.grid(row=row, column=col, padx=5, pady=5, sticky="w")
+            
+            # Update row and column for next button
+            col += 1
+            if col > 2:  # 3 buttons per row
+                col = 0
+                row += 1
     
     def perform_action(self, action):
-        """Handle player actions based on their occupation"""
-        # Add event to event log
-        self.add_event(f"You decided to {action.lower()}.")
+        """Handle player actions"""
+        # Common actions
+        if action == "Rest":
+            self.add_event("You take some time to rest and recover.")
+            self.player["health"] = min(100, self.player["health"] + 10)
+            messagebox.showinfo("Rest", "You feel refreshed. Health increased by 10 points.")
+            
+        elif action == "Explore":
+            self.add_event(f"You explore the area around {self.current_location}.")
+            # Random chance to find something
+            if random.random() < 0.3:  # 30% chance
+                gold_found = random.randint(5, 20)
+                self.player["wealth"] += gold_found
+                self.add_event(f"You found {gold_found} gold while exploring!")
+                messagebox.showinfo("Exploration", f"You explored the area and found {gold_found} gold!")
+            else:
+                messagebox.showinfo("Exploration", "You explored the area but found nothing of interest.")
         
-        # Handle different actions
-        if action == "Hold Court":
-            self.show_dialog("Royal Court", 
-                           "You hold court, listening to the petitions and disputes of your subjects.\n\n"
-                           "A peasant claims his neighbor stole his cow. A merchant seeks lower taxes. "
-                           "A noble requests permission to build a new mill on his land.")
+        # King actions
+        elif action == "Hold Court":
+            self.add_event("You held court, listening to petitions from your subjects.")
+            messagebox.showinfo("Hold Court", "You held court and made several important decisions.")
+            
         elif action == "Collect Taxes":
-            tax_amount = random.randint(20, 100)
+            tax_amount = random.randint(100, 300)
             self.player["wealth"] += tax_amount
             self.add_event(f"You collected {tax_amount} gold in taxes.")
-            self.update_player_info()
-        elif action == "Train":
-            skill_increase = random.randint(1, 3)
-            self.player["skills"]["combat"] += skill_increase
-            self.add_event(f"Your combat skill increased by {skill_increase}!")
-        elif action == "Plant Crops":
-            if self.current_season == "Spring":
-                self.add_event("You plant your fields for the coming season. With good weather, you expect a bountiful harvest.")
-            else:
-                self.add_event("It's not the right season for planting. You should wait until spring.")
-        elif action == "Harvest":
-            if self.current_season == "Autumn":
-                harvest_amount = random.randint(10, 30)
-                self.player["wealth"] += harvest_amount
-                self.add_event(f"You harvest your crops, earning {harvest_amount} gold at the market.")
-                self.update_player_info()
-            else:
-                self.add_event("Your crops aren't ready for harvest yet. Be patient.")
+            messagebox.showinfo("Taxes", f"You collected {tax_amount} gold in taxes from your kingdom.")
+            
+        elif action == "Make Decree":
+            self.add_event("You issued a royal decree.")
+            messagebox.showinfo("Decree", "Your decree has been announced throughout the kingdom.")
         
-        elif action == "Trade":
-            trade_result = random.randint(-10, 30)
-            if trade_result > 0:
-                self.player["wealth"] += trade_result
-                self.add_event(f"Your trading was successful! You earned {trade_result} gold.")
-            elif trade_result < 0:
-                self.player["wealth"] += trade_result
-                self.add_event(f"Your trading went poorly. You lost {abs(trade_result)} gold.")
+        # Noble actions
+        elif action == "Collect Rent":
+            rent_amount = random.randint(50, 150)
+            self.player["wealth"] += rent_amount
+            self.add_event(f"You collected {rent_amount} gold in rent from your lands.")
+            messagebox.showinfo("Rent", f"You collected {rent_amount} gold in rent from your tenants.")
+            
+        elif action == "Host Feast":
+            cost = random.randint(30, 80)
+            if self.player["wealth"] >= cost:
+                self.player["wealth"] -= cost
+                self.add_event(f"You hosted a feast for {cost} gold. Your reputation has improved.")
+                messagebox.showinfo("Feast", "Your feast was a success! Your reputation has improved.")
             else:
-                self.add_event("You broke even on your trades today.")
-            self.update_player_info()
+                messagebox.showerror("Insufficient Funds", "You don't have enough gold to host a feast.")
+                
+        elif action == "Attend Court":
+            self.add_event("You attended court at the royal palace.")
+            messagebox.showinfo("Court", "You attended court and made valuable connections.")
+        
+        # Knight actions
+        elif action == "Train":
+            self.add_event("You spent time training your combat skills.")
+            if "Combat" in self.player["skills"]:
+                self.player["skills"]["Combat"] += 1
+            messagebox.showinfo("Training", "Your combat skills have improved.")
+            
+        elif action == "Patrol":
+            self.add_event("You patrolled the area, keeping it safe.")
+            patrol_pay = random.randint(10, 30)
+            self.player["wealth"] += patrol_pay
+            messagebox.showinfo("Patrol", f"You completed your patrol and earned {patrol_pay} gold.")
+            
+        elif action == "Enter Tournament":
+            tournament_fee = 50
+            if self.player["wealth"] >= tournament_fee:
+                self.player["wealth"] -= tournament_fee
+                self.add_event(f"You entered a tournament for {tournament_fee} gold.")
+                
+                # Determine outcome based on Combat skill
+                combat_skill = self.player["skills"].get("Combat", 0)
+                success_chance = 0.3 + (combat_skill * 0.05)  # Base 30% + 5% per skill level
+                
+                if random.random() < success_chance:
+                    prize = random.randint(80, 200)
+                    self.player["wealth"] += prize
+                    self.add_event(f"You won the tournament and earned {prize} gold!")
+                    messagebox.showinfo("Tournament Victory", f"You won the tournament and earned {prize} gold!")
+                else:
+                    self.add_event("You were defeated in the tournament.")
+                    messagebox.showinfo("Tournament Defeat", "You fought well but were defeated in the tournament.")
+            else:
+                messagebox.showerror("Insufficient Funds", "You don't have enough gold to enter the tournament.")
+        
+        # Merchant actions
+        elif action == "Trade":
+            trade_profit = random.randint(20, 60)
+            self.player["wealth"] += trade_profit
+            self.add_event(f"You conducted trade and earned {trade_profit} gold.")
+            messagebox.showinfo("Trade", f"Your trading was successful. You earned {trade_profit} gold.")
+            
+        elif action == "Negotiate":
+            self.add_event("You negotiated better prices for your goods.")
+            if "Bargaining" in self.player["skills"]:
+                self.player["skills"]["Bargaining"] += 1
+            messagebox.showinfo("Negotiation", "Your bargaining skills have improved.")
+            
+        elif action == "Invest":
+            investment_amount = simpledialog.askinteger("Investment", "How much gold would you like to invest?", 
+                                                      minvalue=10, maxvalue=self.player["wealth"])
+            if investment_amount:
+                if self.player["wealth"] >= investment_amount:
+                    self.player["wealth"] -= investment_amount
+                    self.add_event(f"You invested {investment_amount} gold in a business venture.")
+                    messagebox.showinfo("Investment", "Your investment will yield returns in the future.")
+                else:
+                    messagebox.showerror("Insufficient Funds", "You don't have enough gold for this investment.")
+        
+        # Tavern Owner actions
+        elif action == "Serve Drinks":
+            earnings = random.randint(15, 40)
+            self.player["wealth"] += earnings
+            self.add_event(f"You served drinks at your tavern and earned {earnings} gold.")
+            messagebox.showinfo("Tavern Business", f"You earned {earnings} gold from serving drinks.")
+            
+        elif action == "Hire Bard":
+            bard_cost = 30
+            if self.player["wealth"] >= bard_cost:
+                self.player["wealth"] -= bard_cost
+                self.add_event(f"You hired a bard for {bard_cost} gold to entertain your customers.")
+                
+                # Chance for increased business
+                if random.random() < 0.7:  # 70% chance
+                    bonus = random.randint(40, 70)
+                    self.player["wealth"] += bonus
+                    self.add_event(f"The bard attracted more customers, earning you an extra {bonus} gold!")
+                    messagebox.showinfo("Bard Performance", f"The bard's performance was a hit! You earned an extra {bonus} gold.")
+                else:
+                    messagebox.showinfo("Bard Performance", "The bard's performance was average. Your customers were entertained.")
+            else:
+                messagebox.showerror("Insufficient Funds", "You don't have enough gold to hire a bard.")
+                
+        elif action == "Listen to Gossip":
+            self.add_event("You listened to gossip from your tavern patrons.")
+            messagebox.showinfo("Gossip", "You overheard interesting rumors and gossip from your patrons.")
+        
+        # Farmer actions
+        elif action == "Tend Crops":
+            self.add_event("You spent time tending to your crops.")
+            if "Agriculture" in self.player["skills"]:
+                self.player["skills"]["Agriculture"] += 1
+            messagebox.showinfo("Farming", "Your agricultural skills have improved.")
+            
+        elif action == "Harvest":
+            if self.current_season in ["Summer", "Fall"]:
+                harvest_amount = random.randint(20, 50)
+                self.player["wealth"] += harvest_amount
+                self.add_event(f"You harvested your crops and earned {harvest_amount} gold at the market.")
+                messagebox.showinfo("Harvest", f"Your harvest was successful! You earned {harvest_amount} gold.")
+            else:
+                self.add_event("It's not the right season for harvesting.")
+                messagebox.showinfo("Harvest", "It's not the right season for harvesting. Try again in Summer or Fall.")
+                
+        elif action == "Sell Produce":
+            earnings = random.randint(10, 30)
+            self.player["wealth"] += earnings
+            self.add_event(f"You sold some of your produce at the market for {earnings} gold.")
+            messagebox.showinfo("Market", f"You sold your produce and earned {earnings} gold.")
+        
+        # Peasant actions
+        elif action == "Work":
+            earnings = random.randint(5, 15)
+            self.player["wealth"] += earnings
+            self.add_event(f"You worked hard and earned {earnings} gold.")
+            messagebox.showinfo("Work", f"You worked hard and earned {earnings} gold.")
+            
+        elif action == "Forage":
+            self.add_event("You foraged in the nearby woods for food and resources.")
+            if random.random() < 0.4:  # 40% chance
+                forage_amount = random.randint(3, 10)
+                self.player["wealth"] += forage_amount
+                self.add_event(f"You found items worth {forage_amount} gold while foraging!")
+                messagebox.showinfo("Foraging", f"You found valuable herbs and mushrooms worth {forage_amount} gold!")
+            else:
+                messagebox.showinfo("Foraging", "You found some food for yourself, but nothing of significant value.")
+                
         elif action == "Beg":
-            amount = random.randint(0, 5)
-            self.player["wealth"] += amount
-            self.add_event(f"You spend the day begging. You collect {amount} gold coins.")
-            self.update_player_info()
+            earnings = random.randint(1, 8)
+            self.player["wealth"] += earnings
+            self.add_event(f"You begged on the streets and received {earnings} gold in charity.")
+            messagebox.showinfo("Begging", f"You received {earnings} gold in charity.")
+        
+        # Default case
         else:
-            # Generic handling for other actions
-            self.add_event(f"You spend the day {action.lower()}ing.")
+            self.add_event(f"You performed the action: {action}")
+            messagebox.showinfo("Action", f"You performed: {action}")
+        
+        # Update player info display
+        self.update_player_info()
     
     def show_interaction_menu(self):
         """Show options for interacting with NPCs"""
@@ -1042,7 +1188,7 @@ class MedievalSimulator:
         
         # Number of potential spouses based on location type
         location_type = self.get_location_type(self.current_location)
-        if location_type == "City":
+        if location_type == "City" or location_type == "Capital City":
             num_spouses = random.randint(3, 5)
         elif location_type == "Town":
             num_spouses = random.randint(2, 4)
@@ -1063,7 +1209,7 @@ class MedievalSimulator:
             # Age range (slightly younger for female spouses in medieval times)
             if gender == "female":
                 age = random.randint(16, self.player["age"])
-        else:
+            else:
                 age = random.randint(self.player["age"] - 5, self.player["age"] + 10)
                 
             # Cap age
@@ -1079,6 +1225,9 @@ class MedievalSimulator:
             elif "poor" in traits:
                 base_wealth = max(5, base_wealth // 2)
                 
+            # Calculate dowry based on wealth
+            dowry = base_wealth * random.randint(1, 3)
+            
             # Create spouse data
             spouse = {
                 "name": name,
@@ -1086,14 +1235,17 @@ class MedievalSimulator:
                 "gender": gender,
                 "traits": traits,
                 "wealth": base_wealth,
-                "dowry": base_wealth * 2,  # Dowry is twice the base wealth
-                "relationship": 50  # Neutral starting relationship
+                "dowry": dowry,  # Add dowry field
+                "relationship": random.randint(30, 70)  # Initial relationship score
             }
             
             potential_spouses.append(spouse)
             
         # Show spouse selection screen
-        self.show_spouse_selection(potential_spouses)
+        if potential_spouses:
+            self.show_spouse_selection(potential_spouses)
+        else:
+            self.show_dialog("No Matches", "There are no suitable marriage prospects in this location.")
     
     def show_spouse_selection(self, potential_spouses):
         """Show a dialog with potential spouses to choose from"""
@@ -1184,1166 +1336,533 @@ class MedievalSimulator:
         self.update_player_info()
     
     def show_market(self):
-        """Show market screen with goods to buy/sell"""
+        """Show the market interface"""
+        # Create a dialog for the market
         dialog = tk.Toplevel(self.root)
         dialog.title("Market")
-        dialog.geometry("600x500")
-        dialog.configure(bg="#f0e6d2")
-        
-        # Make dialog modal
+        dialog.geometry("800x600")
         dialog.transient(self.root)
         dialog.grab_set()
         
-        # Title
-        title = tk.Label(dialog, text="Market", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
-        title.pack(pady=20)
+        # Make the dialog modal
+        dialog.focus_set()
         
-        # Player gold info
-        gold_frame = tk.Frame(dialog, bg="#e6d8bf", bd=2, relief=tk.GROOVE)
-        gold_frame.pack(fill=tk.X, padx=20, pady=10)
+        # Create a frame for the market
+        market_frame = tk.Frame(dialog, padx=20, pady=20, bg="#f0e6d2")
+        market_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Title
+        title_label = tk.Label(market_frame, text="Market", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
+        title_label.pack(pady=(0, 20))
+        
+        # Player's gold
+        gold_frame = tk.Frame(market_frame, bg="#f0e6d2")
+        gold_frame.pack(fill=tk.X, pady=(0, 20))
         
         gold_label = tk.Label(gold_frame, text=f"Your Gold: {self.player['wealth']}", 
-                            font=self.text_font, bg="#e6d8bf", fg="#5c4425")
-        gold_label.pack(pady=10)
-
-        # Market tabs
-        tab_control = ttk.Notebook(dialog)
-        tab_control.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+                            font=self.text_font, bg="#f0e6d2", fg="#5c4425")
+        gold_label.pack(side=tk.LEFT)
         
-        # Buy tab
-        buy_tab = tk.Frame(tab_control, bg="#f0e6d2")
-        tab_control.add(buy_tab, text="Buy")
+        # Inventory button
+        inventory_btn = tk.Button(gold_frame, text="View Inventory", 
+                                **self.get_button_style(),
+                                command=lambda: self.show_inventory_from_market(dialog))
+        inventory_btn.pack(side=tk.RIGHT)
         
-        # Sell tab
-        sell_tab = tk.Frame(tab_control, bg="#f0e6d2")
-        tab_control.add(sell_tab, text="Sell")
+        # Create a frame for the items
+        items_frame = tk.Frame(market_frame, bg="#f0e6d2")
+        items_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Generate items to buy based on location
-        location_type = self.get_location_type(self.current_location)
-        items_to_buy = self.get_market_items(location_type)
+        # Generate market items
+        market_items = self.generate_market_items()
         
-        # Create scrollable frame for buy items
-        buy_canvas = tk.Canvas(buy_tab, bg="#f0e6d2", highlightthickness=0)
-        buy_scrollbar = ttk.Scrollbar(buy_tab, orient="vertical", command=buy_canvas.yview)
-        buy_scrollable_frame = tk.Frame(buy_canvas, bg="#f0e6d2")
+        # Column headers
+        headers_frame = tk.Frame(items_frame, bg="#e6d8bf")
+        headers_frame.pack(fill=tk.X, pady=(0, 10))
         
-        buy_scrollable_frame.bind(
+        # Define column widths
+        widths = [200, 100, 80, 300, 80]
+        
+        # Headers
+        headers = ["Item", "Type", "Price", "Description", "Action"]
+        for i, header in enumerate(headers):
+            header_label = tk.Label(headers_frame, text=header, font=self.header_font, 
+                                  bg="#e6d8bf", fg="#5c4425", width=widths[i]//10)
+            header_label.grid(row=0, column=i, padx=5, pady=5)
+        
+        # Create a canvas and scrollbar for the items
+        canvas = tk.Canvas(items_frame, bg="#f0e6d2", highlightthickness=0)
+        scrollbar = tk.Scrollbar(items_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg="#f0e6d2")
+        
+        scrollable_frame.bind(
             "<Configure>",
-            lambda e: buy_canvas.configure(scrollregion=buy_canvas.bbox("all"))
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
         )
         
-        buy_canvas.create_window((0, 0), window=buy_scrollable_frame, anchor="nw")
-        buy_canvas.configure(yscrollcommand=buy_scrollbar.set)
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
         
-        buy_canvas.pack(side="left", fill="both", expand=True)
-        buy_scrollbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
         
-        # Add buy items to scrollable frame
-        for item in items_to_buy:
-            item_frame = tk.Frame(buy_scrollable_frame, bg="#e6d8bf", bd=2, relief=tk.GROOVE)
-            item_frame.pack(fill=tk.X, pady=5, padx=5)
+        # Add items to the scrollable frame
+        for i, item in enumerate(market_items):
+            item_frame = tk.Frame(scrollable_frame, bg="#f0e6d2", pady=5)
+            item_frame.pack(fill=tk.X)
             
-            item_name = tk.Label(item_frame, text=item["name"], 
-                               font=self.text_font, bg="#e6d8bf", fg="#5c4425", width=20, anchor="w")
-            item_name.pack(side=tk.LEFT, padx=5, pady=5)
+            # Item name
+            name_label = tk.Label(item_frame, text=item["name"], font=self.text_font,
+                                bg="#f0e6d2", fg="#5c4425", width=widths[0]//10, anchor="w")
+            name_label.grid(row=0, column=0, padx=5)
             
-            item_price = tk.Label(item_frame, text=f"Price: {item['price']} gold", 
-                                font=self.small_font, bg="#e6d8bf", fg="#5c4425", width=15)
-            item_price.pack(side=tk.LEFT, padx=5, pady=5)
+            # Item type
+            type_label = tk.Label(item_frame, text=item["type"], font=self.text_font,
+                                bg="#f0e6d2", fg="#5c4425", width=widths[1]//10)
+            type_label.grid(row=0, column=1, padx=5)
             
-            buy_btn = tk.Button(item_frame, text="Buy", 
-                              command=lambda i=item: self.buy_item(i, gold_label),
-                              **self.get_button_style("small"))
-            buy_btn.pack(side=tk.RIGHT, padx=5, pady=5)
+            # Item price
+            price_label = tk.Label(item_frame, text=str(item["price"]), font=self.text_font,
+                                 bg="#f0e6d2", fg="#5c4425", width=widths[2]//10)
+            price_label.grid(row=0, column=2, padx=5)
+            
+            # Item description
+            description = item.get("description", "")
+            if not description:
+                if item["type"] == "Food":
+                    description = f"Restores {item.get('health_value', 10)} health"
+                elif item["type"] == "Potion":
+                    effect = item.get("effect", "health")
+                    if effect == "health":
+                        description = f"Restores {item.get('health_value', 20)} health"
+                    else:
+                        description = f"Improves {item.get('skill', 'combat')} by {item.get('skill_value', 1)}"
+                elif item["type"] == "Book":
+                    description = f"Teaches {item.get('skill', 'diplomacy')} +{item.get('skill_value', 2)}"
+                elif item["type"] == "Weapon":
+                    description = f"Damage: {item.get('damage', 5)}"
+                elif item["type"] == "Armor":
+                    description = f"Protection: {item.get('protection', 5)}"
+            
+            desc_label = tk.Label(item_frame, text=description, font=self.text_font,
+                                bg="#f0e6d2", fg="#5c4425", width=widths[3]//10, anchor="w")
+            desc_label.grid(row=0, column=3, padx=5)
+            
+            # Buy button
+            buy_button = tk.Button(
+                item_frame, 
+                text="Buy", 
+                command=lambda item=item: self.buy_item(item, gold_label),
+                **self.get_button_style("small")
+            )
+            buy_button.grid(row=0, column=4, padx=5)
+            
+            # Alternate row colors for better readability
+            if i % 2 == 1:
+                item_frame.configure(bg="#e6d8bf")
+                name_label.configure(bg="#e6d8bf")
+                type_label.configure(bg="#e6d8bf")
+                price_label.configure(bg="#e6d8bf")
+                desc_label.configure(bg="#e6d8bf")
         
-        # Create player inventory items to sell
-        # For now, we'll just create some sample items the player can sell
-        player_items = [
-            {"name": "Old Sword", "price": 25, "quantity": 1},
-            {"name": "Herbs", "price": 5, "quantity": 10},
-            {"name": "Wheat", "price": 2, "quantity": 20},
-            {"name": "Leather", "price": 8, "quantity": 5}
-        ]
-        
-        # Create scrollable frame for sell items
-        sell_canvas = tk.Canvas(sell_tab, bg="#f0e6d2", highlightthickness=0)
-        sell_scrollbar = ttk.Scrollbar(sell_tab, orient="vertical", command=sell_canvas.yview)
-        sell_scrollable_frame = tk.Frame(sell_canvas, bg="#f0e6d2")
-        
-        sell_scrollable_frame.bind(
-            "<Configure>",
-            lambda e: sell_canvas.configure(scrollregion=sell_canvas.bbox("all"))
+        # Back button
+        back_button = tk.Button(
+            market_frame, 
+            text="Back to Town", 
+            command=dialog.destroy,
+            **self.get_button_style()
         )
-        
-        sell_canvas.create_window((0, 0), window=sell_scrollable_frame, anchor="nw")
-        sell_canvas.configure(yscrollcommand=sell_scrollbar.set)
-        
-        sell_canvas.pack(side="left", fill="both", expand=True)
-        sell_scrollbar.pack(side="right", fill="y")
-        
-        # Add sell items to scrollable frame
-        for item in player_items:
-            item_frame = tk.Frame(sell_scrollable_frame, bg="#e6d8bf", bd=2, relief=tk.GROOVE)
-            item_frame.pack(fill=tk.X, pady=5, padx=5)
-            
-            item_name = tk.Label(item_frame, text=f"{item['name']} (x{item['quantity']})", 
-                               font=self.text_font, bg="#e6d8bf", fg="#5c4425", width=20, anchor="w")
-            item_name.pack(side=tk.LEFT, padx=5, pady=5)
-            
-            item_price = tk.Label(item_frame, text=f"Value: {item['price']} gold", 
-                                font=self.small_font, bg="#e6d8bf", fg="#5c4425", width=15)
-            item_price.pack(side=tk.LEFT, padx=5, pady=5)
-            
-            sell_btn = tk.Button(item_frame, text="Sell", 
-                               command=lambda i=item: self.sell_item(i, gold_label),
-                               **self.get_button_style("small"))
-            sell_btn.pack(side=tk.RIGHT, padx=5, pady=5)
-
-        # Close button
-        close_btn = tk.Button(dialog, text="Close", command=dialog.destroy, 
-                            **self.get_button_style("medium"))
-        close_btn.pack(pady=20)
+        back_button.pack(pady=20)
     
-    def get_market_items(self, location_type):
-        """Generate market items based on location type"""
-        # Base items available everywhere
-        items = [
-            {"name": "Bread", "price": 2, "type": "food"},
-            {"name": "Ale", "price": 3, "type": "food"},
-            {"name": "Cheese", "price": 5, "type": "food"}
+    def generate_market_items(self):
+        """Generate items for the market"""
+        # Create a list of market items
+        market_items = []
+        
+        # Food items
+        food_items = [
+            {"name": "Bread", "type": "Food", "price": 5, "health_value": 10, "value": 5},
+            {"name": "Cheese", "type": "Food", "price": 8, "health_value": 15, "value": 8},
+            {"name": "Meat", "type": "Food", "price": 12, "health_value": 25, "value": 12},
+            {"name": "Fruit", "type": "Food", "price": 7, "health_value": 12, "value": 7},
+            {"name": "Wine", "type": "Food", "price": 15, "health_value": 8, "value": 15}
         ]
         
-        # Add location-specific items
-        if location_type == "Capital City":
-            items.extend([
-                {"name": "Fine Clothing", "price": 50, "type": "clothing"},
-                {"name": "Silver Goblet", "price": 80, "type": "luxury"},
-                {"name": "Quality Sword", "price": 120, "type": "weapon"},
-                {"name": "Books", "price": 60, "type": "luxury"},
-                {"name": "Spices", "price": 40, "type": "food"},
-                {"name": "Fine Horse", "price": 200, "type": "animal"}
-            ])
-        elif location_type == "City":
-            items.extend([
-                {"name": "Clothing", "price": 25, "type": "clothing"},
-                {"name": "Basic Sword", "price": 60, "type": "weapon"},
-                {"name": "Shield", "price": 40, "type": "weapon"},
-                {"name": "Wine", "price": 15, "type": "food"},
-                {"name": "Horse", "price": 100, "type": "animal"}
-            ])
-        elif location_type == "Village":
-            items.extend([
-                {"name": "Simple Clothing", "price": 15, "type": "clothing"},
-                {"name": "Knife", "price": 20, "type": "tool"},
-                {"name": "Chicken", "price": 8, "type": "animal"},
-                {"name": "Seeds", "price": 5, "type": "farming"},
-                {"name": "Tools", "price": 25, "type": "tool"}
-            ])
+        # Potion items
+        potion_items = [
+            {"name": "Health Potion", "type": "Potion", "price": 25, "health_value": 50, "effect": "health", "value": 25},
+            {"name": "Strength Potion", "type": "Potion", "price": 40, "skill": "Combat", "skill_value": 2, "effect": "skill", "value": 40},
+            {"name": "Intelligence Potion", "type": "Potion", "price": 45, "skill": "Intelligence", "skill_value": 2, "effect": "skill", "value": 45}
+        ]
         
-        return items
+        # Book items
+        book_items = [
+            {"name": "Book of Combat", "type": "Book", "price": 60, "skill": "Combat", "skill_value": 3, "value": 60},
+            {"name": "Book of Trade", "type": "Book", "price": 55, "skill": "Bargaining", "skill_value": 3, "value": 55},
+            {"name": "Book of Diplomacy", "type": "Book", "price": 65, "skill": "Diplomacy", "skill_value": 3, "value": 65}
+        ]
+        
+        # Weapon items
+        weapon_items = [
+            {"name": "Dagger", "type": "Weapon", "price": 30, "damage": 5, "value": 30},
+            {"name": "Sword", "type": "Weapon", "price": 80, "damage": 10, "value": 80},
+            {"name": "Axe", "type": "Weapon", "price": 70, "damage": 12, "value": 70},
+            {"name": "Bow", "type": "Weapon", "price": 75, "damage": 8, "value": 75}
+        ]
+        
+        # Armor items
+        armor_items = [
+            {"name": "Leather Armor", "type": "Armor", "price": 50, "protection": 5, "value": 50},
+            {"name": "Chain Mail", "type": "Armor", "price": 120, "protection": 10, "value": 120},
+            {"name": "Plate Armor", "type": "Armor", "price": 200, "protection": 15, "value": 200}
+        ]
+        
+        # Add some random items from each category
+        market_items.extend(random.sample(food_items, min(3, len(food_items))))
+        market_items.extend(random.sample(potion_items, min(2, len(potion_items))))
+        market_items.extend(random.sample(book_items, min(1, len(book_items))))
+        market_items.extend(random.sample(weapon_items, min(2, len(weapon_items))))
+        market_items.extend(random.sample(armor_items, min(1, len(armor_items))))
+        
+        # Shuffle the items
+        random.shuffle(market_items)
+        
+        return market_items
     
     def buy_item(self, item, gold_label):
-        """Handle buying an item"""
+        """Buy an item from the market"""
         # Check if player has enough gold
-        if self.player["wealth"] >= item["price"]:
+        if self.player["wealth"] < item["price"]:
+            messagebox.showerror("Insufficient Funds", 
+                               f"You don't have enough gold to buy {item['name']}.")
+            return
+            
+        # Confirm purchase
+        confirm = messagebox.askyesno("Confirm Purchase", 
+                                    f"Are you sure you want to buy {item['name']} for {item['price']} gold?")
+        
+        if confirm:
             # Deduct cost
             self.player["wealth"] -= item["price"]
+            
+            # Add to inventory
+            if "inventory" not in self.player:
+                self.player["inventory"] = []
+                
+            # Create inventory item (slightly different structure than market item)
+            inventory_item = {
+                "name": item["name"],
+                "type": item["type"],
+                "value": item["price"],  # Store original price as value
+                "description": item.get("description", ""),
+                "usable": item.get("usable", False)
+            }
+            
+            # Add specific properties based on item type
+            if item["type"] == "Food":
+                inventory_item["health_value"] = item.get("health_value", 10)
+            elif item["type"] == "Potion":
+                inventory_item["effect"] = item.get("effect", "health")
+                inventory_item["health_value"] = item.get("health_value", 20)
+                inventory_item["skill"] = item.get("skill", "combat")
+                inventory_item["skill_value"] = item.get("skill_value", 1)
+            elif item["type"] == "Book":
+                inventory_item["skill"] = item.get("skill", "diplomacy")
+                inventory_item["skill_value"] = item.get("skill_value", 2)
+            elif item["type"] == "Weapon":
+                inventory_item["damage"] = item.get("damage", 5)
+            elif item["type"] == "Armor":
+                inventory_item["protection"] = item.get("protection", 5)
+                
+            self.player["inventory"].append(inventory_item)
             
             # Update gold display
             gold_label.config(text=f"Your Gold: {self.player['wealth']}")
             
-            # Add item to inventory (not implemented yet)
+            # Add event
             self.add_event(f"You purchased {item['name']} for {item['price']} gold.")
             
-            # Update main screen player info
+            # Update player info in main screen
             self.update_player_info()
-        else:
-            # Show error message
-            messagebox.showerror("Cannot Buy", "You don't have enough gold for this item.")
     
     def sell_item(self, item, gold_label):
-        """Handle selling an item"""
-        # Add value to player's gold
-        sell_value = item["price"]
-        self.player["wealth"] += sell_value
+        """Sell an item from the player's inventory"""
+        # Calculate sell value (usually less than buy price)
+        sell_value = int(item["value"] * 0.7)  # 70% of original value
         
-        # Update gold display
-        gold_label.config(text=f"Your Gold: {self.player['wealth']}")
+        # Confirm sale
+        confirm = messagebox.askyesno("Confirm Sale", 
+                                    f"Are you sure you want to sell {item['name']} for {sell_value} gold?")
         
-        # Remove one from quantity
-        item["quantity"] -= 1
+        if confirm:
+            # Add gold to player
+            self.player["wealth"] += sell_value
+            
+            # Remove item from inventory
+            self.player["inventory"].remove(item)
+            
+            # Update gold display if provided
+            if gold_label:
+                gold_label.config(text=f"Your Gold: {self.player['wealth']}")
+            
+            # Add event
+            self.add_event(f"You sold {item['name']} for {sell_value} gold.")
+            
+            # Update player info
+            self.update_player_info()
+            
+            return True
         
-        # If quantity is zero, remove item (would need to update the UI)
-        if item["quantity"] <= 0:
-            # Remove item from list (not implemented yet)
-            pass
-        
-        # Add event
-        self.add_event(f"You sold {item['name']} for {sell_value} gold.")
-        
-        # Update main screen player info
-        self.update_player_info()
+        return False
     
     def show_inventory(self):
-        """Show player inventory"""
-        # For future implementation
-        self.show_dialog("Inventory", "Inventory system not yet implemented.")
-
-    def show_travel_options(self):
-        """Show options for traveling to different locations"""
+        """Show the player's inventory"""
+        # Create a dialog for the inventory
         dialog = tk.Toplevel(self.root)
-        dialog.title("Travel")
-        dialog.geometry("500x400")
-        dialog.configure(bg="#f0e6d2")
-        
-        # Make dialog modal
+        dialog.title("Inventory")
+        dialog.geometry("800x600")
         dialog.transient(self.root)
         dialog.grab_set()
         
+        # Make the dialog modal
+        dialog.focus_set()
+        
+        # Create a frame for the inventory
+        frame = tk.Frame(dialog, padx=20, pady=20, bg="#f0e6d2")
+        frame.pack(fill=tk.BOTH, expand=True)
+        
         # Title
-        title = tk.Label(dialog, text="Travel", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
-        title.pack(pady=20)
+        title_label = tk.Label(frame, text="Your Inventory", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
+        title_label.pack(pady=(0, 20))
         
-        # Current location
-        current = tk.Label(dialog, text=f"Current Location: {self.current_location}", 
-                         font=self.text_font, bg="#f0e6d2", fg="#5c4425")
-        current.pack(pady=10)
+        # Player's wealth
+        wealth_label = tk.Label(frame, text=f"Your Gold: {self.player['wealth']}", 
+                              font=self.text_font, bg="#f0e6d2", fg="#5c4425")
+        wealth_label.pack(pady=(0, 20))
         
-        # Get available locations to travel to
-        available_locations = self.get_available_travel_locations()
+        # Create a frame for the items
+        items_frame = tk.Frame(frame, bg="#f0e6d2")
+        items_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Create a frame for the location list
-        locations_frame = tk.Frame(dialog, bg="#f0e6d2")
-        locations_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
-        
-        # Add each location as a button
-        for location, travel_time in available_locations:
-            loc_frame = tk.Frame(locations_frame, bg="#e6d8bf", bd=2, relief=tk.GROOVE)
-            loc_frame.pack(fill=tk.X, pady=5)
+        # Check if inventory is empty
+        if not self.player["inventory"]:
+            empty_label = tk.Label(items_frame, text="Your inventory is empty.", 
+                                 font=self.text_font, bg="#f0e6d2", fg="#5c4425")
+            empty_label.pack(pady=50)
+        else:
+            # Column headers
+            headers_frame = tk.Frame(items_frame, bg="#e6d8bf")
+            headers_frame.pack(fill=tk.X, pady=(0, 10))
             
-            loc_name = tk.Label(loc_frame, text=location, 
-                              font=self.text_font, bg="#e6d8bf", fg="#5c4425", width=20, anchor="w")
-            loc_name.pack(side=tk.LEFT, padx=10, pady=10)
+            # Define column widths
+            widths = [200, 100, 80, 300, 100]
             
-            loc_time = tk.Label(loc_frame, text=f"Travel Time: {travel_time} days", 
-                              font=self.small_font, bg="#e6d8bf", fg="#5c4425")
-            loc_time.pack(side=tk.LEFT, padx=10, pady=10)
+            # Headers
+            headers = ["Item", "Type", "Value", "Description", "Actions"]
+            for i, header in enumerate(headers):
+                header_label = tk.Label(headers_frame, text=header, font=self.header_font, 
+                                      bg="#e6d8bf", fg="#5c4425", width=widths[i]//10)
+                header_label.grid(row=0, column=i, padx=5, pady=5)
             
-            travel_btn = tk.Button(loc_frame, text="Travel", 
-                                 command=lambda l=location, t=travel_time: self.travel_to(l, t, dialog),
-                                 font=self.text_font, bg="#8b7355", fg="black", width=8)
-            travel_btn.pack(side=tk.RIGHT, padx=10, pady=10)
+            # Create a canvas and scrollbar for the items
+            canvas = tk.Canvas(items_frame, bg="#f0e6d2", highlightthickness=0)
+            scrollbar = tk.Scrollbar(items_frame, orient="vertical", command=canvas.yview)
+            scrollable_frame = tk.Frame(canvas, bg="#f0e6d2")
+            
+            scrollable_frame.bind(
+                "<Configure>",
+                lambda e: canvas.configure(
+                    scrollregion=canvas.bbox("all")
+                )
+            )
+            
+            canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+            canvas.configure(yscrollcommand=scrollbar.set)
+            
+            canvas.pack(side="left", fill="both", expand=True)
+            scrollbar.pack(side="right", fill="y")
+            
+            # Add items to the scrollable frame
+            for i, item in enumerate(self.player["inventory"]):
+                item_frame = tk.Frame(scrollable_frame, bg="#f0e6d2", pady=5)
+                item_frame.pack(fill=tk.X)
+                
+                # Item name
+                name_label = tk.Label(item_frame, text=item["name"], font=self.text_font,
+                                    bg="#f0e6d2", fg="#5c4425", width=widths[0]//10, anchor="w")
+                name_label.grid(row=0, column=0, padx=5)
+                
+                # Item type
+                type_label = tk.Label(item_frame, text=item["type"], font=self.text_font,
+                                    bg="#f0e6d2", fg="#5c4425", width=widths[1]//10)
+                type_label.grid(row=0, column=1, padx=5)
+                
+                # Item value
+                value_label = tk.Label(item_frame, text=str(item["value"]), font=self.text_font,
+                                     bg="#f0e6d2", fg="#5c4425", width=widths[2]//10)
+                value_label.grid(row=0, column=2, padx=5)
+                
+                # Item description
+                description = item.get("description", "")
+                if not description:
+                    if item["type"] == "Food":
+                        description = f"Restores {item.get('health_value', 10)} health"
+                    elif item["type"] == "Potion":
+                        effect = item.get("effect", "health")
+                        if effect == "health":
+                            description = f"Restores {item.get('health_value', 20)} health"
+                        else:
+                            description = f"Improves {item.get('skill', 'combat')} by {item.get('skill_value', 1)}"
+                    elif item["type"] == "Book":
+                        description = f"Teaches {item.get('skill', 'diplomacy')} +{item.get('skill_value', 2)}"
+                    elif item["type"] == "Weapon":
+                        description = f"Damage: {item.get('damage', 5)}"
+                    elif item["type"] == "Armor":
+                        description = f"Protection: {item.get('protection', 5)}"
+                
+                desc_label = tk.Label(item_frame, text=description, font=self.text_font,
+                                    bg="#f0e6d2", fg="#5c4425", width=widths[3]//10, anchor="w")
+                desc_label.grid(row=0, column=3, padx=5)
+                
+                # Action buttons
+                action_frame = tk.Frame(item_frame, bg="#f0e6d2")
+                action_frame.grid(row=0, column=4, padx=5)
+                
+                # Use button
+                use_button = tk.Button(
+                    action_frame, 
+                    text="Use", 
+                    command=lambda item=item: self.use_item(item, dialog),
+                    **self.get_button_style("small")
+                )
+                use_button.pack(side=tk.LEFT, padx=2)
+                
+                # Sell button
+                sell_button = tk.Button(
+                    action_frame, 
+                    text="Sell", 
+                    command=lambda item=item: self.sell_item_from_inventory(item, wealth_label, dialog),
+                    **self.get_button_style("small")
+                )
+                sell_button.pack(side=tk.LEFT, padx=2)
+                
+                # Alternate row colors for better readability
+                if i % 2 == 1:
+                    item_frame.configure(bg="#2a2a2a")
+                    name_label.configure(bg="#2a2a2a")
+                    type_label.configure(bg="#2a2a2a")
+                    value_label.configure(bg="#2a2a2a")
+                    desc_label.configure(bg="#2a2a2a")
+                    action_frame.configure(bg="#2a2a2a")
         
         # Close button
-        close_btn = tk.Button(dialog, text="Cancel", command=dialog.destroy, 
-                            **self.get_button_style("medium"))
-        close_btn.pack(pady=20)
-    
-    def get_available_travel_locations(self):
-        """Get available locations to travel to based on current location"""
-        current_kingdom = self.get_kingdom_for_location(self.current_location)
-        locations = []
+        close_button = tk.Button(
+            frame, 
+            text="Close", 
+            font=("Arial", 14),
+            **self.get_button_style(),
+            command=dialog.destroy
+        )
+        close_button.pack(pady=20)
         
-        # Add all cities and villages in the current kingdom except current location
-        if current_kingdom != "Unknown":
-            kingdom_data = self.world["kingdoms"][current_kingdom]
+    def sell_item_from_inventory(self, item, wealth_label, dialog):
+        """Sell an item from the inventory"""
+        # Calculate sell price (usually less than buy price)
+        sell_price = int(item["value"] * 0.7)  # 70% of original value
+        
+        # Confirm sale
+        confirm = messagebox.askyesno("Confirm Sale", 
+                                     f"Are you sure you want to sell {item['name']} for {sell_price} gold?",
+                                     parent=dialog)
+        
+        if confirm:
+            # Remove item from inventory
+            self.player["inventory"].remove(item)
             
-            for city in kingdom_data["cities"]:
-                if city != self.current_location:
-                    # Cities are 1-3 days travel time
-                    travel_time = random.randint(1, 3)
-                    locations.append((city, travel_time))
+            # Add gold to player's wealth
+            self.player["wealth"] += sell_price
             
-            for village in kingdom_data["villages"]:
-                if village != self.current_location:
-                    # Villages are 1-2 days travel time
-                    travel_time = random.randint(1, 2)
-                    locations.append((village, travel_time))
-        
-        # Add capitals of other kingdoms (longer travel time)
-        for k_name, kingdom in self.world["kingdoms"].items():
-            if k_name != current_kingdom:
-                capital = kingdom["capital"]
-                # Traveling to another kingdom takes 3-7 days
-                travel_time = random.randint(3, 7)
-                locations.append((capital, travel_time))
-        
-        return locations
-    def travel_to(self, location, travel_time, dialog):
-        """Handle traveling to a new location"""
-        dialog.destroy()
-        
-        # Check if any random events during travel
-        travel_event = self.generate_travel_event()
-        
-        if travel_event:
-            # Show travel event dialog
-            self.show_dialog("Travel Event", travel_event["description"])
+            # Update wealth display
+            wealth_label.config(text=f"Gold: {self.player['wealth']}")
             
-            # Apply any effects from the event
-            if "wealth_change" in travel_event:
-                self.player["wealth"] += travel_event["wealth_change"]
-                if travel_event["wealth_change"] > 0:
-                    self.add_event(f"You gained {travel_event['wealth_change']} gold during your journey.")
-                else:
-                    self.add_event(f"You lost {abs(travel_event['wealth_change'])} gold during your journey.")
+            # Add event
+            self.add_event(f"You sold {item['name']} for {sell_price} gold.")
             
-            if "health_change" in travel_event:
-                self.player["health"] += travel_event["health_change"]
-                self.player["health"] = max(0, min(100, self.player["health"]))  # Ensure health stays 0-100
+            # Update player info in main screen
+            self.update_player_info()
+            
+            # Refresh inventory display
+            dialog.destroy()
+            self.show_inventory()
+            
+    def use_item(self, item, dialog):
+        """Use an item from the inventory"""
+        # Different effects based on item type
+        if item["type"] == "Food":
+            # Food items restore health
+            health_gain = item.get("health_value", 10)
+            self.player["health"] = min(100, self.player["health"] + health_gain)
+            message = f"You consumed {item['name']} and gained {health_gain} health."
+            
+        elif item["type"] == "Potion":
+            # Potions have special effects
+            effect = item.get("effect", "health")
+            if effect == "health":
+                health_gain = item.get("health_value", 20)
+                self.player["health"] = min(100, self.player["health"] + health_gain)
+                message = f"You drank {item['name']} and gained {health_gain} health."
+            elif effect == "skill":
+                skill = item.get("skill", "combat")
+                skill_gain = item.get("skill_value", 1)
                 
-                if travel_event["health_change"] > 0:
-                    self.add_event(f"Your health improved by {travel_event['health_change']} during your journey.")
-                else:
-                    self.add_event(f"You were injured during your journey, losing {abs(travel_event['health_change'])} health.")
+                # Initialize skills if not present
+                if "skills" not in self.player:
+                    self.player["skills"] = {}
+                
+                # Initialize specific skill if not present
+                if skill not in self.player["skills"]:
+                    self.player["skills"][skill] = 0
+                    
+                self.player["skills"][skill] += skill_gain
+                message = f"You drank {item['name']} and gained {skill_gain} {skill} skill."
+                
+        elif item["type"] == "Book":
+            # Books improve skills
+            skill = item.get("skill", "diplomacy")
+            skill_gain = item.get("skill_value", 2)
+            
+            # Initialize skills if not present
+            if "skills" not in self.player:
+                self.player["skills"] = {}
+            
+            # Initialize specific skill if not present
+            if skill not in self.player["skills"]:
+                self.player["skills"][skill] = 0
+                
+            self.player["skills"][skill] += skill_gain
+            message = f"You read {item['name']} and gained {skill_gain} {skill} skill."
+            
+        else:
+            # Generic usable item
+            message = f"You used {item['name']}."
         
-        # Update current location
-        self.current_location = location
-        self.location_info.config(text=location)
+        # Remove item from inventory
+        self.player["inventory"].remove(item)
         
-        # Add travel log
-        self.add_event(f"You traveled to {location}. The journey took {travel_time} days.")
+        # Add event
+        self.add_event(message)
         
-        # Advance time based on travel days
-        for _ in range(travel_time):
-            self.advance_day()
+        # Show result
+        self.show_dialog("Item Used", message)
         
         # Update player info
         self.update_player_info()
     
-    def generate_travel_event(self):
-        """Generate a random travel event"""
-        # 30% chance of an event during travel
-        if random.random() < 0.3:
-            events = [
-                {
-                    "description": "You encounter bandits on the road! They demand payment to let you pass safely.",
-                    "wealth_change": -random.randint(5, 20)
-                },
-                {
-                    "description": "You find a wounded traveler on the road. After helping them, they reward you for your kindness.",
-                    "wealth_change": random.randint(5, 15)
-                },
-                {
-                    "description": "Bad weather makes the journey difficult. You slip and fall, injuring yourself.",
-                    "health_change": -random.randint(5, 15)
-                },
-                {
-                    "description": "You come across an abandoned cart with some valuable goods inside.",
-                    "wealth_change": random.randint(10, 30)
-                },
-                {
-                    "description": "You meet a traveling merchant and trade stories. They give you advice about the local markets.",
-                    "effect": "trading_knowledge"
-                }
-            ]
-            return random.choice(events)
-        return None
-    
-    def advance_season(self):
-        """Advance the game by one season"""
-        # Update season
-        self.season_index = (self.season_index + 1) % 4
-        self.current_season = self.seasons[self.season_index]
-        
-        # If we've gone through all seasons, advance the year
-        if self.season_index == 0:
-            self.current_year += 1
-        
-        # Add event to log
-        self.add_event(f"The season has changed to {self.current_season}.")
-        if self.season_index == 0:
-            self.add_event(f"A new year has begun! It is now the year {self.current_year}.")
-        
-        # Age character
-        self.player["age"] += 0.25  # Add quarter of a year
-        
-        # Age spouse and children
-        if self.player.get("spouse") and isinstance(self.player["spouse"], dict):
-            self.player["spouse"]["age"] += 0.25
-            
-        if self.player.get("children"):
-            for i, child in enumerate(self.player["children"]):
-                if isinstance(child, dict):
-                    self.player["children"][i]["age"] += 0.25
-        
-        # Generate seasonal events
-        self.generate_seasonal_events()
-        
-        # Random wealth changes based on occupation and season
-        self.apply_seasonal_income()
-        
-        # Update UI
-        self.update_status_bar()
-        
-        # Show a summary dialog
-        self.show_season_summary()
-    
-    def apply_seasonal_income(self):
-        """Apply seasonal income based on occupation"""
-        occupation = self.player["occupation"]
-        base_income = 0
-        
-        # Base income by occupation
-        if occupation == "King":
-            base_income = random.randint(100, 200)
-        elif occupation == "Noble":
-            base_income = random.randint(50, 100)
-        elif occupation == "Knight":
-            base_income = random.randint(30, 60)
-        elif occupation == "Merchant":
-            base_income = random.randint(20, 80)
-        elif occupation == "Tavern Owner":
-            base_income = random.randint(15, 40)
-        elif occupation == "Farmer":
-            base_income = random.randint(5, 20)
-        else:  # Default
-            base_income = random.randint(5, 15)
-        
-        # Seasonal modifiers
-        season_modifier = 1.0
-        if occupation == "Farmer":
-            if self.current_season == "Spring":
-                season_modifier = 0.5  # Planting season, less income
-            elif self.current_season == "Summer":
-                season_modifier = 0.8  # Growing season, some income
-            elif self.current_season == "Autumn":
-                season_modifier = 2.0  # Harvest season, more income
-            elif self.current_season == "Winter":
-                season_modifier = 0.3  # Winter, very little income
-        elif occupation == "Merchant" or occupation == "Tavern Owner":
-            if self.current_season == "Winter":
-                season_modifier = 0.7  # Less trade in winter
-            elif self.current_season == "Summer":
-                season_modifier = 1.3  # More trade in summer
-        
-        # Calculate final income
-        income = int(base_income * season_modifier)
-        
-        # Apply income
-        self.player["wealth"] += income
-        
-        # Add event
-        self.add_event(f"You earned {income} gold this season from your occupation.")
-    
-    def show_season_summary(self):
-        """Show a summary of the season's events"""
-        # Create summary message
-        summary = f"Season Summary: {self.current_season}, Year {self.current_year}\n\n"
-        
-        # Add age update
-        summary += f"You are now {int(self.player['age'])} years"
-        months = int((self.player['age'] % 1) * 12)
-        if months > 0:
-            summary += f" and {months} months"
-        summary += " old.\n\n"
-        
-        # Add wealth update
-        summary += f"Your current wealth: {self.player['wealth']} gold\n\n"
-        
-        # Add family update if applicable
-        if self.player.get("spouse"):
-            spouse = self.player["spouse"]
-            spouse_name = spouse["name"] if isinstance(spouse, dict) else spouse
-            summary += f"Your spouse {spouse_name} is by your side.\n"
-            
-        if self.player.get("children") and len(self.player["children"]) > 0:
-            summary += f"You have {len(self.player['children'])} children.\n"
-        
-        # Show dialog
-        self.show_dialog(f"{self.current_season} Summary", summary)
-    
-    def advance_day(self):
-        """Advance the game by one day"""
-        # Update game state for a new day
-        self.current_day += 1
-        
-        # Check for season change (every 30 days)
-        if self.current_day % 30 == 0:
-            self.advance_season()
-            
-        # Update UI elements
-        self.update_status_bar()
-        
-        # Random events
-        if random.random() < 0.2:  # 20% chance of an event each day
-            self.generate_travel_event()
-    
-    def create_character_form(self):
-        """Create the character creation form"""
-        self.clear_screen()
-        
-        # Set up variables for form inputs
-        self.name_var = tk.StringVar()
-        self.gender_var = tk.StringVar()
-        self.occupation_var = tk.StringVar()
-        
-        # Title
-        title_label = tk.Label(self.main_container, text="Create Your Character", 
-                              font=self.title_font, bg="#f0e6d2", fg="#5c4425")
-        title_label.pack(pady=20)
-        
-        # Main form container
-        form_frame = tk.Frame(self.main_container, bg="#f0e6d2", padx=20, pady=20)
-        form_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Left side - character info inputs
-        left_frame = tk.Frame(form_frame, bg="#f0e6d2")
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
-        
-        # Name input
-        name_frame = tk.Frame(left_frame, bg="#f0e6d2")
-        name_frame.pack(fill=tk.X, pady=10)
-        
-        name_label = tk.Label(name_frame, text="Name:", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
-        name_label.pack(anchor=tk.W)
-        
-        name_entry = tk.Entry(name_frame, textvariable=self.name_var, font=self.text_font, width=30)
-        name_entry.pack(fill=tk.X, pady=5)
-        
-        # Gender selection
-        gender_frame = tk.Frame(left_frame, bg="#f0e6d2")
-        gender_frame.pack(fill=tk.X, pady=10)
-        
-        gender_label = tk.Label(gender_frame, text="Gender:", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
-        gender_label.pack(anchor=tk.W)
-        
-        gender_options = ["Male", "Female"]
-        for option in gender_options:
-            rb = tk.Radiobutton(gender_frame, text=option, variable=self.gender_var, value=option,
-                              font=self.text_font, bg="#f0e6d2", fg="#5c4425")
-            rb.pack(anchor=tk.W)
-        
-        # Occupation selection
-        occupation_frame = tk.Frame(left_frame, bg="#f0e6d2")
-        occupation_frame.pack(fill=tk.X, pady=10)
-        
-        occupation_label = tk.Label(occupation_frame, text="Occupation:", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
-        occupation_label.pack(anchor=tk.W)
-        
-        occupations = ["King", "Noble", "Knight", "Merchant", "Tavern Owner", "Farmer", "Peasant"]
-        for occupation in occupations:
-            rb = tk.Radiobutton(occupation_frame, text=occupation, variable=self.occupation_var, value=occupation,
-                              font=self.text_font, bg="#f0e6d2", fg="#5c4425",
-                              command=lambda o=occupation: update_description(o))
-            rb.pack(anchor=tk.W)
-        
-        # Right side - description and start button
-        right_frame = tk.Frame(form_frame, bg="#e6d8bf", bd=2, relief=tk.RIDGE, padx=15, pady=15)
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
-        
-        # Description title
-        desc_title = tk.Label(right_frame, text="Occupation Description", font=self.header_font, bg="#e6d8bf", fg="#5c4425")
-        desc_title.pack(anchor=tk.W, pady=(0, 10))
-        
-        # Description text
-        self.desc_text = tk.Text(right_frame, wrap=tk.WORD, width=40, height=15, 
-                               font=self.text_font, bg="#e6d8bf", fg="#5c4425", bd=0)
-        self.desc_text.pack(fill=tk.BOTH, expand=True)
-        self.desc_text.insert(tk.END, "Select an occupation to see its description.")
-        self.desc_text.config(state=tk.DISABLED)
-        
-        # Start button
-        start_frame = tk.Frame(self.main_container, bg="#f0e6d2", pady=20)
-        start_frame.pack(fill=tk.X)
-        
-        start_btn = tk.Button(start_frame, text="Start Your Journey", 
-                            command=self.create_character,
-                            **self.get_button_style("large"))
-        start_btn.pack()
-        
-        # Back button
-        back_btn = tk.Button(start_frame, text="Back to Menu", 
-                           command=self.show_main_menu,
-                           **self.get_button_style("medium"))
-        start_btn.pack(side=tk.LEFT, padx=10)
-        back_btn.pack(side=tk.RIGHT, padx=10)
-        
-        def update_description(*args):
-            """Update the description text when an occupation is selected"""
-            occupation = self.occupation_var.get()
-            if occupation:
-                description = self.get_occupation_description(occupation)
-                self.desc_text.config(state=tk.NORMAL)
-                self.desc_text.delete(1.0, tk.END)
-                self.desc_text.insert(tk.END, description)
-                self.desc_text.config(state=tk.DISABLED)
-    
-    def update_player_info(self):
-        """Update the player information display in the top bar"""
-        # Find the player info label in the top bar
-        for widget in self.main_container.winfo_children():
-            if isinstance(widget, tk.Frame) and widget.winfo_height() == 40:  # This is likely the top bar
-                for child in widget.winfo_children():
-                    if isinstance(child, tk.Label) and child.winfo_x() < 100:  # This is likely the player info label (on the left)
-                        # Update the label text with current player info
-                        child.config(text=f"{self.player['name']} - {self.player['occupation']} | Age: {self.player['age']} | Health: {self.player['health']} | Gold: {self.player['wealth']}")
-                        break
-                break
-    
-    def show_dialog(self, title, message):
-        """Show a dialog box with a title and message"""
-        dialog = tk.Toplevel(self.root)
-        dialog.title(title)
-        dialog.geometry("400x300")
-        dialog.transient(self.root)
-        dialog.grab_set()
-        
-        # Make the dialog modal
-        dialog.focus_set()
-        
-        # Add some padding
-        frame = tk.Frame(dialog, padx=20, pady=20, bg="#f0e6d2")
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Title
-        title_label = tk.Label(frame, text=title, font=self.header_font, bg="#f0e6d2", fg="#5c4425")
-        title_label.pack(pady=(0, 10))
-        
-        # Message
-        message_text = tk.Text(frame, wrap=tk.WORD, width=40, height=10, font=self.text_font, bg="#f0e6d2", fg="#5c4425", bd=0)
-        message_text.insert(tk.END, message)
-        message_text.config(state=tk.DISABLED)
-        message_text.pack(pady=10)
-        
-        # Close button
-        close_button = tk.Button(frame, text="Close", **self.get_button_style("medium"), command=dialog.destroy)
-        close_button.pack(pady=10)
-        
-        # Center the dialog on the parent window
-        dialog.update_idletasks()
-        width = dialog.winfo_width()
-        height = dialog.winfo_height()
-        x = self.root.winfo_x() + (self.root.winfo_width() // 2) - (width // 2)
-        y = self.root.winfo_y() + (self.root.winfo_height() // 2) - (height // 2)
-        dialog.geometry(f"{width}x{height}+{x}+{y}")
-        
-        return dialog
-    
-    def generate_seasonal_events(self):
-        """Generate random events based on the current season"""
-        # Define possible events for each season
-        seasonal_events = {
-            "Spring": [
-                "The flowers are blooming and the fields are green.",
-                "Spring rains have made the roads muddy and difficult to travel.",
-                "A traveling fair has arrived in the area.",
-                "Local farmers are busy planting their crops."
-            ],
-            "Summer": [
-                "The summer heat is intense this year.",
-                "A drought has affected local crops.",
-                "The summer festival is being prepared in nearby towns.",
-                "Merchants from distant lands have arrived with exotic goods."
-            ],
-            "Autumn": [
-                "The harvest season is in full swing.",
-                "The leaves are changing color, painting the landscape in gold and red.",
-                "Preparations for winter have begun.",
-                "A bountiful harvest has led to celebrations in the region."
-            ],
-            "Winter": [
-                "Snow blankets the landscape, making travel difficult.",
-                "The winter is harsh, and food supplies are dwindling.",
-                "Winter festivities are being held to lift spirits during the cold months.",
-                "A blizzard has struck the region, forcing people to stay indoors."
-            ]
-        }
-        
-        # Randomly decide if an event should occur (50% chance)
-        if random.random() < 0.5:
-            # Select a random event for the current season
-            event = random.choice(seasonal_events[self.current_season])
-            self.add_event(event)
-            
-            # For significant events, show a dialog (20% chance)
-            if random.random() < 0.2:
-                self.show_dialog(f"{self.current_season} Event", event)
-    
-    def update_date_display(self):
-        """Update the date display in the top bar"""
-        # Find the date info label in the top bar
-        for widget in self.main_container.winfo_children():
-            if isinstance(widget, tk.Frame) and widget.winfo_height() == 40:  # This is likely the top bar
-                for child in widget.winfo_children():
-                    if isinstance(child, tk.Label) and child.winfo_x() > 100:  # This is likely the date info label (on the right)
-                        # Update the label text with current date
-                        child.config(text=f"{self.current_season}, Year {self.current_year}")
-                        break
-                break
-    
-    def update_status_bar(self):
-        """Update both player info and date display in the top bar"""
-        self.update_player_info()
-        self.update_date_display()
-    
-    def interact_with_spouse(self):
-        """Interact with your spouse with various options"""
-        if not self.player.get("spouse"):
-            self.show_dialog("Family", "You are not married. Perhaps you should find a spouse first?")
-            return
-            
-        spouse = self.player["spouse"]
-        
-        # Create dialog for spouse interaction
-        dialog = tk.Toplevel(self.root)
-        dialog.title(f"Interact with {spouse['name']}")
-        dialog.geometry("500x400")
-        dialog.transient(self.root)
-        dialog.grab_set()
-        
-        # Make the dialog modal
-        dialog.focus_set()
-        
-        # Add some padding
-        frame = tk.Frame(dialog, padx=20, pady=20, bg="#f0e6d2")
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Spouse info
-        title_label = tk.Label(frame, text=f"Your Spouse: {spouse['name']}", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
-        title_label.pack(pady=(0, 10))
-        
-        # Relationship status
-        relationship = spouse.get("relationship", 50)
-        relationship_text = "Loving" if relationship > 75 else "Good" if relationship > 50 else "Neutral" if relationship > 25 else "Poor"
-        relationship_label = tk.Label(frame, text=f"Relationship: {relationship_text} ({relationship}/100)", font=self.text_font, bg="#f0e6d2", fg="#5c4425")
-        relationship_label.pack(pady=5)
-        
-        # Spouse traits
-        traits_text = ", ".join(spouse.get("traits", []))
-        traits_label = tk.Label(frame, text=f"Traits: {traits_text}", font=self.text_font, bg="#f0e6d2", fg="#5c4425")
-        traits_label.pack(pady=5)
-        
-        # Interaction options
-        options_frame = tk.Frame(frame, bg="#f0e6d2")
-        options_frame.pack(pady=20, fill=tk.X)
-        
-        # Conversation button
-        converse_btn = tk.Button(options_frame, text="Have a Conversation", 
-                               **self.get_button_style("medium"),
-                               command=lambda: self.spouse_conversation(spouse, dialog))
-        converse_btn.pack(pady=5, fill=tk.X)
-        
-        # Gift button
-        gift_btn = tk.Button(options_frame, text="Give a Gift", 
-                           **self.get_button_style("medium"),
-                           command=lambda: self.give_spouse_gift(spouse, dialog))
-        gift_btn.pack(pady=5, fill=tk.X)
-        
-        # Go on outing button
-        outing_btn = tk.Button(options_frame, text="Go on an Outing", 
-                             **self.get_button_style("medium"),
-                             command=lambda: self.spouse_outing(spouse, dialog))
-        outing_btn.pack(pady=5, fill=tk.X)
-        
-        # Have child button (if no children or less than 5)
-        if len(self.player.get("children", [])) < 5:
-            child_btn = tk.Button(options_frame, text="Try for a Child", 
-                                **self.get_button_style("medium"),
-                                command=lambda: self.try_for_child(spouse, dialog))
-            child_btn.pack(pady=5, fill=tk.X)
-        
-        # Close button
-        close_button = tk.Button(frame, text="Back", **self.get_button_style("medium"), command=dialog.destroy)
-        close_button.pack(pady=10)
-    
-    def spouse_conversation(self, spouse, parent_dialog):
-        """Have a conversation with your spouse"""
-        # Topics based on spouse traits
-        topics = [
-            "Discuss the future",
-            "Talk about the kingdom",
-            "Share stories from your past",
-            "Discuss local gossip",
-            "Talk about your feelings"
-        ]
-        
-        # Add trait-specific topics
-        if "ambitious" in spouse.get("traits", []):
-            topics.append("Discuss plans for advancement")
-        if "pious" in spouse.get("traits", []):
-            topics.append("Discuss religious matters")
-        if "kind" in spouse.get("traits", []):
-            topics.append("Talk about helping others")
-        
-        # Create dialog for conversation
-        dialog = tk.Toplevel(parent_dialog)
-        dialog.title(f"Conversation with {spouse['name']}")
-        dialog.geometry("450x350")
-        dialog.transient(parent_dialog)
-        dialog.grab_set()
-        
-        # Make the dialog modal
-        dialog.focus_set()
-        
-        # Add some padding
-        frame = tk.Frame(dialog, padx=20, pady=20, bg="#f0e6d2")
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Title
-        title_label = tk.Label(frame, text="Choose a Conversation Topic", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
-        title_label.pack(pady=(0, 20))
-        
-        # Topic buttons
-        for topic in topics:
-            topic_btn = tk.Button(frame, text=topic, 
-                                **self.get_button_style("medium"),
-                                command=lambda t=topic: self.handle_spouse_conversation(spouse, t, dialog))
-            topic_btn.pack(pady=5, fill=tk.X)
-        
-        # Close button
-        close_button = tk.Button(frame, text="Back", **self.get_button_style("medium"), command=dialog.destroy)
-        close_button.pack(pady=10)
-    
-    def handle_spouse_conversation(self, spouse, topic, dialog):
-        """Handle the outcome of a conversation with spouse"""
+        # Refresh inventory display
         dialog.destroy()
-        
-        # Get spouse traits for personalized responses
-        traits = spouse.get("traits", [])
-        
-        # Responses based on topic and traits
-        responses = {
-            "Discuss the future": {
-                "ambitious": "Your spouse excitedly shares their grand plans for your future together.",
-                "content": "Your spouse seems happy with your current life, but is open to small changes.",
-                "default": "You and your spouse discuss your hopes and dreams for the future."
-            },
-            "Talk about the kingdom": {
-                "loyal": "Your spouse speaks highly of the current ruler and their policies.",
-                "treacherous": "Your spouse whispers about the weaknesses of the current leadership.",
-                "default": "You and your spouse discuss recent events in the kingdom."
-            },
-            "Share stories from your past": {
-                "brave": "Your spouse tells exciting tales of adventure from their youth.",
-                "default": "You and your spouse reminisce about your lives before you met."
-            },
-            "Discuss local gossip": {
-                "deceitful": "Your spouse seems to know all the scandalous secrets of the local nobility.",
-                "honest": "Your spouse seems uncomfortable discussing rumors about others.",
-                "default": "You and your spouse share interesting tidbits you've heard around town."
-            },
-            "Talk about your feelings": {
-                "kind": "Your spouse listens attentively and offers comforting words.",
-                "cruel": "Your spouse seems disinterested in your emotional state.",
-                "default": "You and your spouse have a heart-to-heart conversation."
-            },
-            "Discuss plans for advancement": {
-                "default": "Your spouse shares ambitious ideas about how you could improve your standing."
-            },
-            "Discuss religious matters": {
-                "default": "You and your spouse discuss matters of faith and spirituality."
-            },
-            "Talk about helping others": {
-                "default": "Your spouse suggests ways you could help those less fortunate in your community."
-            }
-        }
-        
-        # Get appropriate response
-        response = "You have a pleasant conversation with your spouse."
-        for trait in traits:
-            if trait in responses.get(topic, {}) and random.random() < 0.7:
-                response = responses[topic][trait]
-                break
-        else:
-            if "default" in responses.get(topic, {}):
-                response = responses[topic]["default"]
-        
-        # Relationship change based on compatibility of topic and traits
-        relationship_change = 0
-        if topic == "Discuss plans for advancement" and "ambitious" in traits:
-            relationship_change = random.randint(5, 10)
-        elif topic == "Discuss religious matters" and "pious" in traits:
-            relationship_change = random.randint(5, 10)
-        elif topic == "Talk about helping others" and "kind" in traits:
-            relationship_change = random.randint(5, 10)
-        elif topic == "Talk about your feelings" and "cruel" in traits:
-            relationship_change = random.randint(-5, -2)
-        else:
-            relationship_change = random.randint(1, 5)
-        
-        # Update relationship
-        spouse["relationship"] = min(100, max(0, spouse.get("relationship", 50) + relationship_change))
-        
-        # Show result
-        result_message = f"{response}\n\n"
-        if relationship_change > 0:
-            result_message += f"Your relationship with {spouse['name']} has improved."
-        elif relationship_change < 0:
-            result_message += f"Your relationship with {spouse['name']} has slightly deteriorated."
-        else:
-            result_message += f"Your relationship with {spouse['name']} remains unchanged."
-        
-        self.add_event(f"You had a conversation with your spouse about {topic.lower()}.")
-        self.show_dialog("Conversation Result", result_message)
-    
-    def give_spouse_gift(self, spouse, parent_dialog):
-        """Give a gift to your spouse"""
-        # Check if player has enough money
-        if self.player["wealth"] < 5:
-            self.show_dialog("Gift", "You don't have enough money to buy a gift.")
-            return
-            
-        # Create gift options based on price
-        gifts = [
-            {"name": "Flowers", "cost": 5, "value": 5},
-            {"name": "Sweets", "cost": 10, "value": 10},
-            {"name": "Book", "cost": 20, "value": 15},
-            {"name": "Jewelry", "cost": 50, "value": 25},
-            {"name": "Fine Clothing", "cost": 100, "value": 40}
-        ]
-        
-        # Filter gifts based on player's wealth
-        affordable_gifts = [gift for gift in gifts if gift["cost"] <= self.player["wealth"]]
-        
-        # Create dialog for gift selection
-        dialog = tk.Toplevel(parent_dialog)
-        dialog.title("Give a Gift")
-        dialog.geometry("450x400")
-        dialog.transient(parent_dialog)
-        dialog.grab_set()
-        
-        # Make the dialog modal
-        dialog.focus_set()
-        
-        # Add some padding
-        frame = tk.Frame(dialog, padx=20, pady=20, bg="#f0e6d2")
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Title
-        title_label = tk.Label(frame, text="Choose a Gift", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
-        title_label.pack(pady=(0, 10))
-        
-        # Player's wealth
-        wealth_label = tk.Label(frame, text=f"Your Gold: {self.player['wealth']}", font=self.text_font, bg="#f0e6d2", fg="#5c4425")
-        wealth_label.pack(pady=(0, 20))
-        
-        # Gift options
-        for gift in affordable_gifts:
-            gift_frame = tk.Frame(frame, bg="#e6d8bf", bd=1, relief=tk.RIDGE)
-            gift_frame.pack(fill=tk.X, pady=5)
-            
-            gift_name = tk.Label(gift_frame, text=gift["name"], font=self.text_font, bg="#e6d8bf", fg="#5c4425")
-            gift_name.pack(side=tk.LEFT, padx=10, pady=5)
-            
-            gift_cost = tk.Label(gift_frame, text=f"Cost: {gift['cost']} gold", font=self.small_font, bg="#e6d8bf", fg="#5c4425")
-            gift_cost.pack(side=tk.LEFT, padx=10, pady=5)
-            
-            buy_btn = tk.Button(gift_frame, text="Give", 
-                              **self.get_button_style("small"),
-                              command=lambda g=gift: self.handle_gift_giving(spouse, g, dialog))
-            buy_btn.pack(side=tk.RIGHT, padx=10, pady=5)
-        
-        # Close button
-        close_button = tk.Button(frame, text="Back", **self.get_button_style("medium"), command=dialog.destroy)
-        close_button.pack(pady=10)
-    
-    def handle_gift_giving(self, spouse, gift, dialog):
-        """Handle the outcome of giving a gift"""
-        dialog.destroy()
-        
-        # Deduct cost
-        self.player["wealth"] -= gift["cost"]
-        
-        # Get spouse traits for personalized responses
-        traits = spouse.get("traits", [])
-        
-        # Base relationship increase
-        relationship_increase = gift["value"]
-        
-        # Adjust based on traits
-        if "content" in traits and gift["name"] in ["Flowers", "Sweets"]:
-            relationship_increase += 5
-            response = f"{spouse['name']} is delighted with the simple but thoughtful gift."
-        elif "ambitious" in traits and gift["name"] in ["Jewelry", "Fine Clothing"]:
-            relationship_increase += 10
-            response = f"{spouse['name']} is impressed by your generous and luxurious gift."
-        elif "pious" in traits and gift["name"] == "Book":
-            relationship_increase += 5
-            response = f"{spouse['name']} appreciates the gift of knowledge and wisdom."
-        else:
-            response = f"{spouse['name']} thanks you for the {gift['name'].lower()}."
-        
-        # Update relationship
-        spouse["relationship"] = min(100, max(0, spouse.get("relationship", 50) + relationship_increase))
-        
-        # Show result
-        result_message = f"{response}\n\n"
-        result_message += f"Your relationship with {spouse['name']} has improved."
-        
-        self.add_event(f"You gave {spouse['name']} a gift of {gift['name'].lower()}.")
-        self.show_dialog("Gift Result", result_message)
-        self.update_player_info()  # Update gold display
-    
-    def spouse_outing(self, spouse, parent_dialog):
-        """Go on an outing with your spouse"""
-        # Check if player has enough money
-        if self.player["wealth"] < 10:
-            self.show_dialog("Outing", "You don't have enough money to go on an outing.")
-            return
-            
-        # Create outing options
-        outings = [
-            {"name": "Walk in the countryside", "cost": 0, "value": 5},
-            {"name": "Visit the local market", "cost": 10, "value": 10},
-            {"name": "Attend a festival", "cost": 25, "value": 15},
-            {"name": "Dine at a tavern", "cost": 40, "value": 20},
-            {"name": "Attend a royal tournament", "cost": 75, "value": 30}
-        ]
-        
-        # Filter outings based on player's wealth
-        affordable_outings = [outing for outing in outings if outing["cost"] <= self.player["wealth"]]
-        
-        # Create dialog for outing selection
-        dialog = tk.Toplevel(parent_dialog)
-        dialog.title("Go on an Outing")
-        dialog.geometry("450x400")
-        dialog.transient(parent_dialog)
-        dialog.grab_set()
-        
-        # Make the dialog modal
-        dialog.focus_set()
-        
-        # Add some padding
-        frame = tk.Frame(dialog, padx=20, pady=20, bg="#f0e6d2")
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Title
-        title_label = tk.Label(frame, text="Choose an Outing", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
-        title_label.pack(pady=(0, 10))
-        
-        # Player's wealth
-        wealth_label = tk.Label(frame, text=f"Your Gold: {self.player['wealth']}", font=self.text_font, bg="#f0e6d2", fg="#5c4425")
-        wealth_label.pack(pady=(0, 20))
-        
-        # Outing options
-        for outing in affordable_outings:
-            outing_frame = tk.Frame(frame, bg="#e6d8bf", bd=1, relief=tk.RIDGE)
-            outing_frame.pack(fill=tk.X, pady=5)
-            
-            outing_name = tk.Label(outing_frame, text=outing["name"], font=self.text_font, bg="#e6d8bf", fg="#5c4425")
-            outing_name.pack(side=tk.LEFT, padx=10, pady=5)
-            
-            outing_cost = tk.Label(outing_frame, text=f"Cost: {outing['cost']} gold", font=self.small_font, bg="#e6d8bf", fg="#5c4425")
-            outing_cost.pack(side=tk.LEFT, padx=10, pady=5)
-            
-            select_btn = tk.Button(outing_frame, text="Select", 
-                                 **self.get_button_style("small"),
-                                 command=lambda o=outing: self.handle_spouse_outing(spouse, o, dialog))
-            select_btn.pack(side=tk.RIGHT, padx=10, pady=5)
-        
-        # Close button
-        close_button = tk.Button(frame, text="Back", **self.get_button_style("medium"), command=dialog.destroy)
-        close_button.pack(pady=10)
-    
-    def handle_spouse_outing(self, spouse, outing, dialog):
-        """Handle the outcome of going on an outing with spouse"""
-        dialog.destroy()
-        
-        # Deduct cost
-        self.player["wealth"] -= outing["cost"]
-        
-        # Get spouse traits for personalized responses
-        traits = spouse.get("traits", [])
-        
-        # Base relationship increase
-        relationship_increase = outing["value"]
-        
-        # Possible events during outing
-        outing_events = [
-            {"description": "You have a wonderful time together.", "rel_mod": 2},
-            {"description": "The weather is perfect for your outing.", "rel_mod": 1},
-            {"description": "You encounter some interesting people during your outing.", "rel_mod": 0},
-            {"description": "A small mishap occurs, but you laugh it off together.", "rel_mod": -1},
-            {"description": "The outing doesn't go quite as planned, but you make the best of it.", "rel_mod": -2}
-        ]
-        
-        # Select a random event
-        event = random.choice(outing_events)
-        
-        # Adjust based on traits and outing type
-        if "brave" in traits and outing["name"] == "Attend a royal tournament":
-            relationship_increase += 5
-            response = f"{spouse['name']} is thrilled by the excitement of the tournament."
-        elif "kind" in traits and outing["name"] == "Walk in the countryside":
-            relationship_increase += 5
-            response = f"{spouse['name']} enjoys the peaceful time spent in nature with you."
-        elif "ambitious" in traits and outing["name"] in ["Attend a royal tournament", "Dine at a tavern"]:
-            relationship_increase += 5
-            response = f"{spouse['name']} appreciates the opportunity to be seen in society."
-        else:
-            response = f"You and {spouse['name']} enjoy your time {outing['name'].lower()}."
-        
-        # Apply event modifier
-        relationship_increase += event["rel_mod"]
-        
-        # Update relationship
-        spouse["relationship"] = min(100, max(0, spouse.get("relationship", 50) + relationship_increase))
-        
-        # Show result
-        result_message = f"{response}\n\n{event['description']}\n\n"
-        if relationship_increase > 0:
-            result_message += f"Your relationship with {spouse['name']} has improved."
-        elif relationship_increase < 0:
-            result_message += f"Your relationship with {spouse['name']} has slightly deteriorated."
-        else:
-            result_message += f"Your relationship with {spouse['name']} remains unchanged."
-        
-        self.add_event(f"You went on an outing with {spouse['name']} to {outing['name'].lower()}.")
-        self.show_dialog("Outing Result", result_message)
-        self.update_player_info()  # Update gold display
-    
-    def try_for_child(self, spouse, parent_dialog):
-        """Try to have a child with your spouse"""
-        parent_dialog.destroy()
-        
-        # Check relationship level - better relationship means higher chance
-        relationship = spouse.get("relationship", 50)
-        base_chance = 0.3  # 30% base chance
-        relationship_bonus = relationship / 200  # Up to +25% for 100 relationship
-        
-        # Calculate success chance
-        success_chance = min(0.8, base_chance + relationship_bonus)  # Cap at 80%
-        
-        # Determine outcome
-        if random.random() < success_chance:
-            # Success! Create a child
-            child_gender = random.choice(["male", "female"])
-            child_name = self.generate_name(child_gender)
-            
-            # Create child data
-            child = {
-                "name": child_name,
-                "gender": child_gender,
-                "age": 0,
-                "traits": self.generate_traits(),  # Inherit some traits
-                "relationship": 100  # Children start with max relationship
-            }
-            
-            # Add child to player's children
-            if "children" not in self.player:
-                self.player["children"] = []
-            
-            self.player["children"].append(child)
-            
-            # Create success message
-            if child_gender == "male":
-                message = f"Congratulations! Your wife has given birth to a healthy baby boy named {child_name}."
-            else:
-                message = f"Congratulations! Your wife has given birth to a healthy baby girl named {child_name}."
-                
-            # Add event
-            self.add_event(f"Your child {child_name} was born.")
-            
-            # Improve relationship with spouse
-            spouse["relationship"] = min(100, spouse.get("relationship", 50) + 10)
-            
-            # Show dialog
-            self.show_dialog("New Child", message)
-        else:
-            # No child this time
-            message = "Despite your efforts, your wife does not become pregnant at this time."
-            self.show_dialog("Family Planning", message)
+        self.show_inventory()
     
     def generate_name(self, gender):
         """Generate a random medieval name based on gender"""
@@ -2363,5 +1882,566 @@ class MedievalSimulator:
             return random.choice(male_names)
         else:
             return random.choice(female_names)
+    
+    def equip_item(self, item, dialog=None):
+        """Equip a weapon or armor item"""
+        if item["type"] not in ["Weapon", "Armor"]:
+            messagebox.showinfo("Cannot Equip", f"{item['name']} cannot be equipped.")
+            return
+            
+        # Initialize equipment if not present
+        if "equipment" not in self.player:
+            self.player["equipment"] = {}
+            
+        # Check if an item is already equipped in this slot
+        slot = item["type"].lower()
+        old_item = self.player["equipment"].get(slot)
+        
+        # Equip the new item
+        self.player["equipment"][slot] = item
+        
+        # Add event
+        message = f"You equipped {item['name']}."
+        self.add_event(message)
+        
+        # Show result
+        self.show_dialog("Item Equipped", message)
+        
+        # Update player info
+        self.update_player_info()
+    
+        # Refresh inventory display if dialog is provided
+        if dialog and dialog.winfo_exists():
+            dialog.destroy()
+            self.show_inventory()
+            
+            
+    def is_item_equipped(self, item):
+        """Check if an item is currently equipped"""
+        if "equipment" not in self.player:
+            return False
+            
+        slot = item["type"].lower()
+        equipped_item = self.player["equipment"].get(slot)
+        
+        if not equipped_item:
+            return False
+            
+        # Compare items (name should be unique enough)
+        return equipped_item["name"] == item["name"]
+    
+    def unequip_item(self, slot, dialog=None):
+        """Unequip an item from the specified slot"""
+        if "equipment" not in self.player or slot not in self.player["equipment"]:
+            return
+            
+        # Get the item being unequipped
+        item = self.player["equipment"][slot]
+        
+        # Remove from equipment
+        del self.player["equipment"][slot]
+        
+        # Add event
+        message = f"You unequipped {item['name']}."
+        self.add_event(message)
+        
+        # Show result
+        self.show_dialog("Item Unequipped", message)
+        
+        # Update player info
+        self.update_player_info()
+        
+        # Refresh inventory display if dialog is provided
+        if dialog and dialog.winfo_exists():
+            dialog.destroy()
+            self.show_inventory()
+    
+    def update_player_info(self):
+        """Update the player information display in the top bar"""
+        # Find the player info label in the top bar
+        for widget in self.main_container.winfo_children():
+            if isinstance(widget, tk.Frame) and widget.winfo_height() == 40:  # This is the top bar
+                for child in widget.winfo_children():
+                    if isinstance(child, tk.Label) and child.winfo_x() < 100:  # This is the player info label on the left
+                        # Update the label text
+                        child.config(text=f"{self.player['name']} - {self.player['occupation']} | Age: {self.player['age']} | Health: {self.player['health']} | Gold: {self.player['wealth']}")
+                        break
+    
+    def create_character_form(self):
+        """Display the character creation form"""
+        self.clear_screen()
+        
+        # Create variables for form inputs
+        self.name_var = tk.StringVar()
+        self.gender_var = tk.StringVar()
+        self.occupation_var = tk.StringVar()
+        
+        # Create title
+        title_label = tk.Label(self.main_container, text="Create Your Character", 
+                              font=("Times New Roman", 24, "bold"), fg="#8B4513")
+        title_label.pack(pady=(20, 30))
+        
+        # Create main form container with two columns
+        form_container = tk.Frame(self.main_container)
+        form_container.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        # Left column - inputs
+        left_frame = tk.Frame(form_container, width=400)
+        left_frame.pack(side="left", fill="both", padx=(0, 10))
+        
+        # Right column - description and buttons
+        right_frame = tk.Frame(form_container, width=400)
+        right_frame.pack(side="right", fill="both", padx=(10, 0))
+        
+        # Name input
+        name_frame = tk.Frame(left_frame)
+        name_frame.pack(fill="x", pady=10)
+        
+        name_label = tk.Label(name_frame, text="Name:", font=("Times New Roman", 14))
+        name_label.pack(side="left", padx=(0, 10))
+        
+        name_entry = tk.Entry(name_frame, textvariable=self.name_var, font=("Times New Roman", 14), width=20)
+        name_entry.pack(side="left", fill="x", expand=True)
+        
+        # Gender selection
+        gender_frame = tk.Frame(left_frame)
+        gender_frame.pack(fill="x", pady=10)
+        
+        gender_label = tk.Label(gender_frame, text="Gender:", font=("Times New Roman", 14))
+        gender_label.pack(side="left", padx=(0, 10))
+        
+        gender_options_frame = tk.Frame(gender_frame)
+        gender_options_frame.pack(side="left", fill="x")
+        
+        male_radio = tk.Radiobutton(gender_options_frame, text="Male", variable=self.gender_var, 
+                                   value="Male", font=("Times New Roman", 12))
+        male_radio.pack(side="left", padx=10)
+        
+        female_radio = tk.Radiobutton(gender_options_frame, text="Female", variable=self.gender_var, 
+                                     value="Female", font=("Times New Roman", 12))
+        female_radio.pack(side="left", padx=10)
+        
+        # Occupation selection with scrollable frame
+        occupation_label = tk.Label(left_frame, text="Choose Your Occupation:", 
+                                   font=("Times New Roman", 14, "bold"))
+        occupation_label.pack(anchor="w", pady=(20, 10))
+        
+        occupations_frame = tk.Frame(left_frame)
+        occupations_frame.pack(fill="both", expand=True)
+        
+        occupations = [
+            "King", "Noble", "Knight", "Merchant", 
+            "Tavern Owner", "Farmer", "Peasant"
+        ]
+        
+        # Create radio buttons for each occupation
+        for occupation in occupations:
+            occupation_radio = tk.Radiobutton(
+                occupations_frame, 
+                text=occupation,
+                variable=self.occupation_var,
+                value=occupation,
+                font=("Times New Roman", 12),
+                command=self.update_occupation_description
+            )
+            occupation_radio.pack(anchor="w", pady=5)
+        
+        # Right side - occupation description
+        description_label = tk.Label(right_frame, text="Occupation Description:", 
+                                    font=("Times New Roman", 14, "bold"))
+        description_label.pack(anchor="w", pady=(0, 10))
+        
+        # Create a text widget for the description
+        self.description_text = tk.Text(right_frame, height=12, width=40, 
+                                      font=("Times New Roman", 12),
+                                      wrap="word", bg="#F5F5DC", bd=2)
+        self.description_text.pack(fill="both", expand=True, pady=(0, 20))
+        self.description_text.config(state="disabled")
+        
+        # Buttons
+        buttons_frame = tk.Frame(right_frame)
+        buttons_frame.pack(fill="x", pady=20)
+        
+        back_btn = tk.Button(buttons_frame, text="Back to Menu", 
+                           **self.get_button_style(),
+                           command=self.show_main_menu)
+        back_btn.pack(side="left", padx=10)
+        
+        start_btn = tk.Button(buttons_frame, text="Begin Your Journey", 
+                            **self.get_button_style(),
+                            command=self.create_character)
+        start_btn.pack(side="right", padx=10)
+        
+        # Set focus to name entry
+        name_entry.focus_set()
+    
+    def update_occupation_description(self):
+        """Update the occupation description based on selected occupation"""
+        occupation = self.occupation_var.get()
+        
+        # Enable text widget for editing
+        self.description_text.config(state="normal")
+        
+        # Clear current text
+        self.description_text.delete(1.0, tk.END)
+        
+        # Get and insert description
+        description = self.get_occupation_description(occupation)
+        self.description_text.insert(tk.END, description)
+        
+        # Disable text widget again
+        self.description_text.config(state="disabled")
+    
+    def show_travel_options(self):
+        """Show available travel destinations"""
+        messagebox.showinfo("Travel", "Travel options will be implemented in a future update.")
+        # TODO: Implement travel functionality
+    
+    def advance_season(self):
+        """Advance the game by one season"""
+        seasons = ["Spring", "Summer", "Fall", "Winter"]
+        
+        # Update season
+        self.season_index = (self.season_index + 1) % 4
+        self.current_season = seasons[self.season_index]
+        
+        # If we've completed a year cycle, increase age
+        if self.season_index == 0:  # Back to Spring
+            self.current_year += 1
+            self.player["age"] += 1
+            self.add_event(f"You are now {self.player['age']} years old.")
+        
+        # Add season change event
+        self.add_event(f"The season has changed to {self.current_season}.")
+        
+        # Update the game interface
+        self.show_game_interface()
+        
+        # Show a summary message
+        messagebox.showinfo("Season Change", f"The season has changed to {self.current_season}.\nCurrent year: {self.current_year}")
+    
+    def show_inventory_from_market(self, market_dialog):
+        """Show inventory from the market dialog"""
+        # Hide market dialog temporarily
+        market_dialog.withdraw()
+        
+        # Show inventory
+        self.show_inventory()
+        
+        # Restore market dialog
+        market_dialog.deiconify()
+    
+    def show_dialog(self, title, message):
+        """Show a simple dialog with a message"""
+        dialog = tk.Toplevel(self.root)
+        dialog.title(title)
+        dialog.geometry("400x300")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Make the dialog modal
+        dialog.focus_set()
+        
+        # Add some padding
+        frame = tk.Frame(dialog, padx=20, pady=20, bg="#f0e6d2")
+        frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Message
+        message_label = tk.Label(frame, text=message, font=self.text_font, 
+                               bg="#f0e6d2", fg="#5c4425", wraplength=350, justify=tk.LEFT)
+        message_label.pack(pady=(0, 20))
+        
+        # OK button
+        ok_button = tk.Button(frame, text="OK", **self.get_button_style(), command=dialog.destroy)
+        ok_button.pack()
+    
+    def interact_with_spouse(self):
+        """Interact with the player's spouse"""
+        # Check if player has a spouse
+        if not self.player.get("spouse"):
+            self.show_dialog("No Spouse", "You are not married.")
+            return
+            
+        # Create dialog for spouse interaction
+        dialog = tk.Toplevel(self.root)
+        dialog.title(f"Interact with {self.player['spouse']['name']}")
+        dialog.geometry("500x400")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Make the dialog modal
+        dialog.focus_set()
+        
+        # Add some padding
+        frame = tk.Frame(dialog, padx=20, pady=20, bg="#f0e6d2")
+        frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Title
+        title_label = tk.Label(frame, text=f"Interact with {self.player['spouse']['name']}", 
+                             font=self.header_font, bg="#f0e6d2", fg="#5c4425")
+        title_label.pack(pady=(0, 20))
+        
+        # Spouse info
+        spouse = self.player["spouse"]
+        
+        info_text = f"Age: {spouse['age']}\n"
+        if "traits" in spouse:
+            info_text += f"Traits: {', '.join(spouse['traits'])}\n"
+        if "relationship" in spouse:
+            info_text += f"Relationship: {spouse['relationship']}/100\n"
+            
+        info_label = tk.Label(frame, text=info_text, font=self.text_font, 
+                            bg="#f0e6d2", fg="#5c4425", justify=tk.LEFT)
+        info_label.pack(anchor=tk.W, pady=(0, 20))
+        
+        # Interaction buttons
+        buttons_frame = tk.Frame(frame, bg="#f0e6d2")
+        buttons_frame.pack(fill=tk.X, pady=10)
+        
+        # Talk button
+        talk_btn = tk.Button(buttons_frame, text="Talk", 
+                           **self.get_button_style(),
+                           command=lambda: self.talk_to_spouse(dialog))
+        talk_btn.pack(side=tk.LEFT, padx=10)
+        
+        # Gift button
+        gift_btn = tk.Button(buttons_frame, text="Give Gift", 
+                           **self.get_button_style(),
+                           command=lambda: self.give_gift_to_spouse(dialog))
+        gift_btn.pack(side=tk.LEFT, padx=10)
+        
+        # Outing button
+        outing_btn = tk.Button(buttons_frame, text="Go on Outing", 
+                             **self.get_button_style(),
+                             command=lambda: self.go_on_outing_with_spouse(dialog))
+        outing_btn.pack(side=tk.LEFT, padx=10)
+        
+        # Try for child button
+        child_btn = tk.Button(buttons_frame, text="Try for Child", 
+                            **self.get_button_style(),
+                            command=lambda: self.try_for_child(dialog))
+        child_btn.pack(side=tk.LEFT, padx=10)
+        
+        # Close button
+        close_btn = tk.Button(frame, text="Close", 
+                            **self.get_button_style(),
+                            command=dialog.destroy)
+        close_btn.pack(pady=20)
+    
+    def talk_to_spouse(self, parent_dialog):
+        """Talk to spouse to improve relationship"""
+        spouse = self.player["spouse"]
+        relationship_increase = random.randint(1, 5)
+        spouse["relationship"] = min(100, spouse["relationship"] + relationship_increase)
+        
+        self.add_event(f"You had a pleasant conversation with your spouse, {spouse['name']}.")
+        messagebox.showinfo("Talk", f"You had a nice conversation with {spouse['name']}. Relationship improved by {relationship_increase} points.", parent=parent_dialog)
+        
+        # Refresh the dialog
+        parent_dialog.destroy()
+        self.interact_with_spouse()
+    
+    def give_gift_to_spouse(self, parent_dialog):
+        """Give a gift to spouse to improve relationship"""
+        # Check if player has any items to give
+        if not self.player["inventory"]:
+            messagebox.showinfo("No Items", "You don't have any items to give as a gift.", parent=parent_dialog)
+            return
+            
+        # Create dialog for gift selection
+        gift_dialog = tk.Toplevel(parent_dialog)
+        gift_dialog.title("Select Gift")
+        gift_dialog.geometry("400x300")
+        gift_dialog.transient(parent_dialog)
+        gift_dialog.grab_set()
+        
+        # Make the dialog modal
+        gift_dialog.focus_set()
+        
+        # Add some padding
+        frame = tk.Frame(gift_dialog, padx=20, pady=20, bg="#f0e6d2")
+        frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Title
+        title_label = tk.Label(frame, text="Select a Gift", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
+        title_label.pack(pady=(0, 20))
+        
+        # Create a listbox for items
+        items_frame = tk.Frame(frame, bg="#f0e6d2")
+        items_frame.pack(fill=tk.BOTH, expand=True)
+        
+        items_listbox = tk.Listbox(items_frame, font=self.text_font, height=10)
+        items_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Add scrollbar
+        scrollbar = tk.Scrollbar(items_frame, orient=tk.VERTICAL, command=items_listbox.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        items_listbox.config(yscrollcommand=scrollbar.set)
+        
+        # Add items to listbox
+        for item in self.player["inventory"]:
+            items_listbox.insert(tk.END, f"{item['name']} ({item['type']})")
+        
+        # Buttons
+        buttons_frame = tk.Frame(frame, bg="#f0e6d2")
+        buttons_frame.pack(fill=tk.X, pady=10)
+        
+        # Give button
+        give_btn = tk.Button(buttons_frame, text="Give Gift", 
+                           **self.get_button_style(),
+                           command=lambda: self.process_gift(items_listbox.curselection(), parent_dialog, gift_dialog))
+        give_btn.pack(side=tk.LEFT, padx=10)
+        
+        # Cancel button
+        cancel_btn = tk.Button(buttons_frame, text="Cancel", 
+                             **self.get_button_style(),
+                             command=gift_dialog.destroy)
+        cancel_btn.pack(side=tk.RIGHT, padx=10)
+    
+    def process_gift(self, selection, parent_dialog, gift_dialog):
+        """Process the selected gift"""
+        if not selection:
+            messagebox.showinfo("No Selection", "Please select an item to give.", parent=gift_dialog)
+            return
+            
+        # Get the selected item
+        item_index = selection[0]
+        item = self.player["inventory"][item_index]
+        
+        # Remove the item from inventory
+        self.player["inventory"].pop(item_index)
+        
+        # Calculate relationship increase based on item value
+        relationship_increase = max(5, min(20, item["value"] // 5))
+        
+        # Update spouse relationship
+        spouse = self.player["spouse"]
+        spouse["relationship"] = min(100, spouse["relationship"] + relationship_increase)
+        
+        # Add event
+        self.add_event(f"You gave {item['name']} as a gift to your spouse, {spouse['name']}.")
+        
+        # Show message
+        messagebox.showinfo("Gift Given", 
+                          f"You gave {item['name']} to {spouse['name']}. They appreciated your gift!\n\n"
+                          f"Relationship improved by {relationship_increase} points.", 
+                          parent=gift_dialog)
+        
+        # Close dialogs and refresh
+        gift_dialog.destroy()
+        parent_dialog.destroy()
+        self.interact_with_spouse()
+    
+    def go_on_outing_with_spouse(self, parent_dialog):
+        """Go on an outing with spouse to improve relationship"""
+        # Check if player has enough gold
+        outing_cost = random.randint(10, 30)
+        if self.player["wealth"] < outing_cost:
+            messagebox.showinfo("Insufficient Funds", 
+                              f"You need {outing_cost} gold to go on an outing.", 
+                              parent=parent_dialog)
+            return
+            
+        # Deduct cost
+        self.player["wealth"] -= outing_cost
+        
+        # Calculate relationship increase
+        relationship_increase = random.randint(5, 15)
+        
+        # Update spouse relationship
+        spouse = self.player["spouse"]
+        spouse["relationship"] = min(100, spouse["relationship"] + relationship_increase)
+        
+        # Generate outing description
+        outings = [
+            f"a romantic walk through {self.current_location}",
+            f"dinner at a local tavern",
+            f"a trip to the market",
+            f"a visit to a nearby village",
+            f"a picnic in the countryside"
+        ]
+        outing = random.choice(outings)
+        
+        # Add event
+        self.add_event(f"You took your spouse, {spouse['name']}, on {outing}.")
+        
+        # Show message
+        messagebox.showinfo("Outing", 
+                          f"You spent {outing_cost} gold to take {spouse['name']} on {outing}.\n\n"
+                          f"You both had a wonderful time!\n\n"
+                          f"Relationship improved by {relationship_increase} points.", 
+                          parent=parent_dialog)
+        
+        # Update player info
+        self.update_player_info()
+        
+        # Refresh dialog
+        parent_dialog.destroy()
+        self.interact_with_spouse()
+    
+    def try_for_child(self, parent_dialog):
+        """Try to have a child with spouse"""
+        spouse = self.player["spouse"]
+        
+        # Check if relationship is good enough
+        if spouse.get("relationship", 0) < 70:
+            messagebox.showinfo("Relationship Too Low", 
+                              f"Your relationship with {spouse['name']} needs to be at least 70 to try for a child.\n\n"
+                              f"Current relationship: {spouse['relationship']}", 
+                              parent=parent_dialog)
+            return
+            
+        # Check if spouse is too old
+        if spouse["age"] > 45:
+            messagebox.showinfo("Age Issue", 
+                              f"{spouse['name']} is too old to have children.", 
+                              parent=parent_dialog)
+            return
+            
+        # Calculate success chance
+        success_chance = 0.3  # 30% base chance
+        
+        # Modify based on relationship
+        success_chance += (spouse["relationship"] - 70) / 100
+        
+        # Try for child
+        if random.random() < success_chance:
+            # Success! Create child
+            child_gender = random.choice(["male", "female"])
+            child_name = self.generate_name(child_gender)
+            
+            # Create child data
+            child = {
+                "name": child_name,
+                "gender": child_gender,
+                "age": 0,
+                "traits": self.generate_traits(),
+                "relationship": 100
+            }
+            
+            # Add child to player's children
+            if "children" not in self.player:
+                self.player["children"] = []
+                
+            self.player["children"].append(child)
+            
+            # Add event
+            self.add_event(f"Your spouse, {spouse['name']}, gave birth to a {child_gender} child named {child_name}.")
+            
+            # Show message
+            messagebox.showinfo("Child Born", 
+                              f"Congratulations! Your spouse, {spouse['name']}, gave birth to a {child_gender} child.\n\n"
+                              f"You named the child {child_name}.", 
+                              parent=parent_dialog)
+        else:
+            # Failure
+            messagebox.showinfo("No Child", 
+                              f"You and {spouse['name']} tried for a child, but were unsuccessful this time.\n\n"
+                              f"You can try again later.", 
+                              parent=parent_dialog)
+        
+        # Refresh dialog
+        parent_dialog.destroy()
+        self.interact_with_spouse()
     
     
