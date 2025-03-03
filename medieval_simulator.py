@@ -57,6 +57,9 @@ class MedievalSimulator:
         elif size == "action":
             return {"font": self.text_font, "bg": "#8b7355", "fg": "black", 
                     "width": 12, "height": 1, "bd": 2, "relief": tk.RAISED}
+        elif size == "family":
+            return {"font": ("Times New Roman", 14, "bold"), "bg": "#8b4513", "fg": "white", 
+                    "width": 15, "height": 1, "bd": 3, "relief": tk.RAISED}
     
     def clear_screen(self):
         # Clear the main container
@@ -1106,11 +1109,21 @@ class MedievalSimulator:
                                         font=self.small_font, bg="#e6d8bf", fg="#5c4425")
             relationship_label.pack(anchor=tk.W)
             
+            # Buttons frame
+            spouse_buttons_frame = tk.Frame(spouse_frame, bg="#e6d8bf")
+            spouse_buttons_frame.pack(fill=tk.X, pady=5)
+            
             # Interact button
-            interact_btn = tk.Button(spouse_frame, text="Interact with Spouse", 
+            interact_btn = tk.Button(spouse_buttons_frame, text="Interact with Spouse", 
                                    **self.get_button_style("medium"),
                                    command=lambda: self.interact_with_spouse_from_family(dialog))
-            interact_btn.pack(anchor=tk.E, pady=10)
+            interact_btn.pack(side=tk.LEFT, padx=5)
+            
+            # Try for child button - direct access
+            try_child_btn = tk.Button(spouse_buttons_frame, text="Try for Child", 
+                                    **self.get_button_style("family"),
+                                    command=lambda: self.try_for_child_from_family(dialog))
+            try_child_btn.pack(side=tk.LEFT, padx=5)
         else:
             no_spouse = tk.Label(spouse_frame, text="You are not married.", font=self.text_font, bg="#e6d8bf", fg="#5c4425")
             no_spouse.pack(anchor=tk.W, pady=5)
@@ -1131,7 +1144,7 @@ class MedievalSimulator:
             children_list_frame = tk.Frame(children_frame, bg="#e6d8bf")
             children_list_frame.pack(fill=tk.BOTH, expand=True, pady=5)
             
-            for child in self.player["children"]:
+            for i, child in enumerate(self.player["children"]):
                 # Check if child is a string (old format) or a dictionary (new format)
                 if isinstance(child, str):
                     # Convert to new format
@@ -1142,6 +1155,8 @@ class MedievalSimulator:
                         "traits": self.generate_traits(),
                         "relationship": 100
                     }
+                    # Update the child in the player's children list
+                    self.player["children"][i] = child
                     
                 child_frame = tk.Frame(children_list_frame, bg="#e6d8bf", bd=1, relief=tk.GROOVE, padx=5, pady=5)
                 child_frame.pack(fill=tk.X, pady=2)
@@ -1158,6 +1173,19 @@ class MedievalSimulator:
                     traits_label = tk.Label(child_frame, text=f"Traits: {traits_text}", 
                                           font=self.small_font, bg="#e6d8bf", fg="#5c4425")
                     traits_label.pack(anchor=tk.W)
+                
+                # Relationship status
+                relationship = child.get("relationship", 100)
+                relationship_text = "Loving" if relationship > 75 else "Good" if relationship > 50 else "Neutral" if relationship > 25 else "Poor"
+                relationship_label = tk.Label(child_frame, text=f"Relationship: {relationship_text}", 
+                                            font=self.small_font, bg="#e6d8bf", fg="#5c4425")
+                relationship_label.pack(anchor=tk.W)
+                
+                # Interact button
+                interact_btn = tk.Button(child_frame, text="Interact", 
+                                       **self.get_button_style("small"),
+                                       command=lambda c=child: self.interact_with_child(c, dialog))
+                interact_btn.pack(anchor=tk.E, pady=5)
         else:
             no_children = tk.Label(children_frame, text="You have no children.", font=self.text_font, bg="#e6d8bf", fg="#5c4425")
             no_children.pack(anchor=tk.W, pady=5)
@@ -1165,6 +1193,11 @@ class MedievalSimulator:
         # Close button
         close_button = tk.Button(frame, text="Close", **self.get_button_style("medium"), command=dialog.destroy)
         close_button.pack(pady=10)
+        
+    def try_for_child_from_family(self, family_dialog):
+        """Try for a child from the family screen"""
+        family_dialog.destroy()
+        self.try_for_child(None)
     
     def interact_with_spouse_from_family(self, family_dialog):
         """Open spouse interaction screen from family screen"""
@@ -1272,13 +1305,40 @@ class MedievalSimulator:
         desc_label = tk.Label(frame, text=desc_text, font=self.text_font, bg="#f0e6d2", fg="#5c4425", wraplength=500)
         desc_label.pack(pady=(0, 20))
         
-        # Spouse options
-        spouse_frame = tk.Frame(frame, bg="#f0e6d2")
-        spouse_frame.pack(fill=tk.BOTH, expand=True)
+        # Create a canvas with scrollbar for many spouse options
+        canvas = tk.Canvas(frame, bg="#f0e6d2", highlightthickness=0)
+        scrollbar = tk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+        spouse_frame = tk.Frame(canvas, bg="#f0e6d2")
         
-        for spouse in potential_spouses:
+        # Configure the canvas
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Create a window inside the canvas for the spouse frame
+        canvas_window = canvas.create_window((0, 0), window=spouse_frame, anchor="nw")
+        
+        # Function to update the scrollregion when the frame size changes
+        def configure_scroll_region(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        
+        spouse_frame.bind("<Configure>", configure_scroll_region)
+        
+        # Function to handle mouse wheel scrolling
+        def on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        # Bind the mousewheel event
+        canvas.bind_all("<MouseWheel>", on_mousewheel)
+        
+        # Function to unbind the mousewheel event when the dialog is closed
+        def on_dialog_close():
+            canvas.unbind_all("<MouseWheel>")
+            dialog.destroy()
+        
+        for i, spouse in enumerate(potential_spouses):
             # Create a frame for each spouse
-            option_frame = tk.Frame(spouse_frame, bg="#e6d8bf", bd=2, relief=tk.RIDGE, padx=10, pady=10)
+            option_frame = tk.Frame(spouse_frame, bg="#e6d8bf", bd=2, relief=tk.RIDGE, padx=10, pady=10, width=550)
             option_frame.pack(fill=tk.X, pady=10)
             
             # Spouse name and age
@@ -1298,15 +1358,22 @@ class MedievalSimulator:
                                   font=self.text_font, bg="#e6d8bf", fg="#5c4425")
             dowry_label.pack(anchor=tk.W, pady=5)
             
-            # Marry button
+            # Marry button - Fix the lambda function to properly capture the spouse
             marry_btn = tk.Button(option_frame, text="Marry", 
                                 **self.get_button_style("medium"),
                                 command=lambda s=spouse: self.marry_spouse(s, dialog))
             marry_btn.pack(anchor=tk.E, pady=5)
         
+        # Update the canvas scroll region
+        spouse_frame.update_idletasks()
+        canvas.config(scrollregion=canvas.bbox("all"))
+        
         # Close button
-        close_button = tk.Button(frame, text="Cancel", **self.get_button_style("medium"), command=dialog.destroy)
+        close_button = tk.Button(frame, text="Close", **self.get_button_style("medium"), command=on_dialog_close)
         close_button.pack(pady=10)
+        
+        # Bind the dialog close event
+        dialog.protocol("WM_DELETE_WINDOW", on_dialog_close)
     
     def marry_spouse(self, spouse, dialog):
         """Handle marriage to selected spouse"""
@@ -2165,7 +2232,7 @@ class MedievalSimulator:
         # Create dialog for spouse interaction
         dialog = tk.Toplevel(self.root)
         dialog.title(f"Interact with {self.player['spouse']['name']}")
-        dialog.geometry("500x400")
+        dialog.geometry("500x450")
         dialog.transient(self.root)
         dialog.grab_set()
         
@@ -2216,11 +2283,24 @@ class MedievalSimulator:
                              command=lambda: self.go_on_outing_with_spouse(dialog))
         outing_btn.pack(side=tk.LEFT, padx=10)
         
-        # Try for child button
-        child_btn = tk.Button(buttons_frame, text="Try for Child", 
-                            **self.get_button_style(),
+        # Try for child section - Make it more prominent
+        child_frame = tk.Frame(frame, bg="#e6d8bf", bd=2, relief=tk.RIDGE, padx=15, pady=15)
+        child_frame.pack(fill=tk.X, pady=20)
+        
+        child_title = tk.Label(child_frame, text="Family Planning", 
+                             font=self.header_font, bg="#e6d8bf", fg="#5c4425")
+        child_title.pack(anchor=tk.W)
+        
+        child_desc = tk.Label(child_frame, 
+                            text="You can try to have a child with your spouse. A good relationship (70+) is required.",
+                            font=self.text_font, bg="#e6d8bf", fg="#5c4425", wraplength=400, justify=tk.LEFT)
+        child_desc.pack(anchor=tk.W, pady=5)
+        
+        # Try for child button - larger and more prominent
+        child_btn = tk.Button(child_frame, text="Try for Child", 
+                            **self.get_button_style("family"),
                             command=lambda: self.try_for_child(dialog))
-        child_btn.pack(side=tk.LEFT, padx=10)
+        child_btn.pack(anchor=tk.CENTER, pady=10)
         
         # Close button
         close_btn = tk.Button(frame, text="Close", 
@@ -2387,15 +2467,13 @@ class MedievalSimulator:
         if spouse.get("relationship", 0) < 70:
             messagebox.showinfo("Relationship Too Low", 
                               f"Your relationship with {spouse['name']} needs to be at least 70 to try for a child.\n\n"
-                              f"Current relationship: {spouse['relationship']}", 
-                              parent=parent_dialog)
+                              f"Current relationship: {spouse['relationship']}")
             return
             
         # Check if spouse is too old
         if spouse["age"] > 45:
             messagebox.showinfo("Age Issue", 
-                              f"{spouse['name']} is too old to have children.", 
-                              parent=parent_dialog)
+                              f"{spouse['name']} is too old to have children.")
             return
             
         # Calculate success chance
@@ -2431,17 +2509,198 @@ class MedievalSimulator:
             # Show message
             messagebox.showinfo("Child Born", 
                               f"Congratulations! Your spouse, {spouse['name']}, gave birth to a {child_gender} child.\n\n"
-                              f"You named the child {child_name}.", 
-                              parent=parent_dialog)
+                              f"You named the child {child_name}.")
         else:
             # Failure
             messagebox.showinfo("No Child", 
                               f"You and {spouse['name']} tried for a child, but were unsuccessful this time.\n\n"
-                              f"You can try again later.", 
-                              parent=parent_dialog)
+                              f"You can try again later.")
+        
+        # Refresh dialog
+        if parent_dialog:
+            parent_dialog.destroy()
+            self.interact_with_spouse()
+    
+    def interact_with_child(self, child, parent_dialog=None):
+        """Interact with a child"""
+        # Create dialog
+        dialog = tk.Toplevel(self.root)
+        dialog.title(f"Interact with {child['name']}")
+        dialog.geometry("500x400")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Make the dialog modal
+        dialog.focus_set()
+        
+        # Add some padding
+        frame = tk.Frame(dialog, padx=20, pady=20, bg="#f0e6d2")
+        frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Title
+        title_label = tk.Label(frame, text=f"Interact with {child['name']}", font=self.header_font, bg="#f0e6d2", fg="#5c4425")
+        title_label.pack(pady=(0, 20))
+        
+        # Child info
+        gender_text = "Son" if child.get("gender", "male") == "male" else "Daughter"
+        info_text = f"Your {gender_text}, {child['name']}, is {child.get('age', 0)} years old."
+        info_label = tk.Label(frame, text=info_text, font=self.text_font, bg="#f0e6d2", fg="#5c4425", wraplength=450)
+        info_label.pack(pady=(0, 20))
+        
+        # Traits
+        if child.get("traits"):
+            traits_text = f"Traits: {', '.join(child['traits'])}"
+            traits_label = tk.Label(frame, text=traits_text, font=self.text_font, bg="#f0e6d2", fg="#5c4425", wraplength=450)
+            traits_label.pack(pady=(0, 20))
+        
+        # Interaction options
+        options_frame = tk.Frame(frame, bg="#f0e6d2")
+        options_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Talk to child
+        talk_btn = tk.Button(options_frame, text="Talk to Child", 
+                           **self.get_button_style("medium"),
+                           command=lambda: self.talk_to_child(child, dialog))
+        talk_btn.pack(fill=tk.X, pady=5)
+        
+        # Play with child
+        play_btn = tk.Button(options_frame, text="Play with Child", 
+                           **self.get_button_style("medium"),
+                           command=lambda: self.play_with_child(child, dialog))
+        play_btn.pack(fill=tk.X, pady=5)
+        
+        # Teach child
+        if child.get("age", 0) >= 5:
+            teach_btn = tk.Button(options_frame, text="Teach Child", 
+                               **self.get_button_style("medium"),
+                               command=lambda: self.teach_child(child, dialog))
+            teach_btn.pack(fill=tk.X, pady=5)
+        
+        # Close button
+        close_button = tk.Button(frame, text="Close", **self.get_button_style("medium"), 
+                               command=lambda: self.close_child_interaction(dialog, parent_dialog))
+        close_button.pack(pady=10)
+    
+    def close_child_interaction(self, dialog, parent_dialog=None):
+        """Close the child interaction dialog and refresh the parent dialog if needed"""
+        dialog.destroy()
+        if parent_dialog:
+            parent_dialog.destroy()
+            self.show_family_screen()
+    
+    def talk_to_child(self, child, parent_dialog):
+        """Talk to a child to improve relationship"""
+        # Increase relationship
+        relationship_increase = random.randint(3, 10)
+        child["relationship"] = min(100, child.get("relationship", 0) + relationship_increase)
+        
+        # Generate random conversation topics based on child's age
+        age = child.get("age", 0)
+        topics = []
+        
+        if age < 3:
+            topics = ["simple words", "colors", "animals", "family members"]
+        elif age < 8:
+            topics = ["favorite toys", "friends", "games", "stories", "dreams"]
+        elif age < 13:
+            topics = ["school", "friends", "hobbies", "future plans", "adventures"]
+        else:
+            topics = ["future plans", "interests", "friends", "life philosophy", "ambitions"]
+        
+        topic = random.choice(topics)
+        
+        # Add event
+        self.add_event(f"You had a nice conversation with your child {child['name']} about {topic}.")
+        
+        # Show message
+        messagebox.showinfo("Talk with Child", 
+                          f"You had a nice conversation with {child['name']} about {topic}.\n\n"
+                          f"Your relationship has improved.", 
+                          parent=parent_dialog)
         
         # Refresh dialog
         parent_dialog.destroy()
-        self.interact_with_spouse()
+        self.interact_with_child(child)
+    
+    def play_with_child(self, child, parent_dialog):
+        """Play with a child to improve relationship"""
+        # Increase relationship
+        relationship_increase = random.randint(5, 15)
+        child["relationship"] = min(100, child.get("relationship", 0) + relationship_increase)
+        
+        # Generate random play activities based on child's age
+        age = child.get("age", 0)
+        activities = []
+        
+        if age < 3:
+            activities = ["peek-a-boo", "rolling a ball", "stacking blocks", "simple songs"]
+        elif age < 8:
+            activities = ["hide and seek", "tag", "make-believe", "drawing", "singing songs"]
+        elif age < 13:
+            activities = ["board games", "outdoor games", "storytelling", "crafts", "exploring"]
+        else:
+            activities = ["chess", "sports", "music", "hunting practice", "riding"]
+        
+        activity = random.choice(activities)
+        
+        # Add event
+        self.add_event(f"You spent time playing {activity} with your child {child['name']}.")
+        
+        # Show message
+        messagebox.showinfo("Play with Child", 
+                          f"You spent time playing {activity} with {child['name']}.\n\n"
+                          f"You both had a wonderful time and your relationship has improved significantly.", 
+                          parent=parent_dialog)
+        
+        # Refresh dialog
+        parent_dialog.destroy()
+        self.interact_with_child(child)
+    
+    def teach_child(self, child, parent_dialog):
+        """Teach a child to improve their skills"""
+        # Only for children 5 and older
+        if child.get("age", 0) < 5:
+            messagebox.showinfo("Too Young", 
+                              f"{child['name']} is too young to learn complex skills.", 
+                              parent=parent_dialog)
+            return
+        
+        # Increase relationship slightly
+        relationship_increase = random.randint(1, 5)
+        child["relationship"] = min(100, child.get("relationship", 0) + relationship_increase)
+        
+        # Generate random skills to teach based on child's age
+        age = child.get("age", 0)
+        skills = []
+        
+        if age < 8:
+            skills = ["reading", "writing", "counting", "manners", "simple crafts"]
+        elif age < 13:
+            skills = ["history", "mathematics", "literature", "craftsmanship", "etiquette"]
+        else:
+            skills = ["philosophy", "strategy", "economics", "leadership", "combat"]
+        
+        skill = random.choice(skills)
+        
+        # Initialize skills if not present
+        if "skills" not in child:
+            child["skills"] = {}
+        
+        # Improve or add the skill
+        skill_increase = random.randint(1, 5)
+        child["skills"][skill] = child["skills"].get(skill, 0) + skill_increase
+        
+        # Add event
+        self.add_event(f"You taught {child['name']} about {skill}.")
+        
+        # Show message
+        messagebox.showinfo("Teach Child", 
+                          f"You spent time teaching {child['name']} about {skill}.\n\n"
+                          f"{child['name']}'s knowledge of {skill} has improved.", 
+                          parent=parent_dialog)
+        
+        # Refresh dialog
+        parent_dialog.destroy()
+        self.interact_with_child(child)
     
     
